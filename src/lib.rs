@@ -20,8 +20,18 @@ pub struct Context {
 
 impl Context {
     /// Creates a new Context
-    /// * `txt` - the input string to parse
-    pub fn new<S: AsRef<str>>(txt: S) -> Self {
+    /// * `txt` - The text of the context
+    /// * `pos` - The position in the context
+    pub fn new<S: AsRef<str>>(txt: S, pos: usize) -> Self {
+        Context {
+            txt: txt.as_ref().to_string(),
+            pos,
+        }
+    }
+
+    /// Creates a new Context from a text string
+    /// * `txt` - The text of the context
+    pub fn from<S: AsRef<str>>(txt: S) -> Self {
         Context {
             txt: txt.as_ref().to_string(),
             pos: 0,
@@ -52,12 +62,12 @@ pub struct Failure {
 }
 
 /// Creates a new `Success` object with the given value and context
-fn success(ctx: Context, val: Vec<String>) -> Success {
+pub fn success(ctx: Context, val: Vec<String>) -> Success {
     Success { val, ctx }
 }
 
 /// Creates a new `Failure` object with the given error message and context
-fn failure<S: AsRef<str>>(ctx: Context, exp: S) -> Failure {
+pub fn failure<S: AsRef<str>>(ctx: Context, exp: S) -> Failure {
     let exp = exp.as_ref().to_string();
     Failure { exp, ctx }
 }
@@ -466,7 +476,7 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 /// #[macro_use] extern crate parse_me;
 /// use parse_me::{map, parse_from_context, string, spaces, sequence, Context};
 ///
-/// let res = parse_from_context(Context::new("Hello World"),
+/// let res = parse_from_context(Context::from("Hello World"),
 ///     map(sequence!(string("Hello"), spaces(), string("World")),
 ///         |r| Ok(vec![r.val.join("")]),
 ///     ),
@@ -513,11 +523,5 @@ pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failu
 /// );
 /// ```
 pub fn parse<S: AsRef<str>>(txt: S, parser: Parser) -> Result<Success, Failure> {
-    parse_from_context(
-        Context {
-            txt: txt.as_ref().to_string(),
-            pos: 0,
-        },
-        parser,
-    )
+    parse_from_context(Context::from(txt), parser)
 }

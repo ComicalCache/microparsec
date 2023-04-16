@@ -266,25 +266,13 @@ fn either_test() {
 
 #[test]
 fn parse_from_context_test() {
-    let res = parse_from_context(Context::new("Hello World"), string("Hello World"));
+    let res = parse_from_context(Context::from("Hello World"), string("Hello World"));
     assert_eq!(res.unwrap().val[0], "Hello World");
 
-    let res = parse_from_context(
-        Context {
-            txt: "Hello World".to_string(),
-            pos: 6,
-        },
-        string("World"),
-    );
+    let res = parse_from_context(Context::new("Hello World", 6), string("World"));
     assert_eq!(res.unwrap().val[0], "World");
 
-    let res = parse_from_context(
-        Context {
-            txt: "Hello World".to_string(),
-            pos: 6,
-        },
-        string("Welt"),
-    );
+    let res = parse_from_context(Context::new("Hello World", 6), string("Welt"));
     assert_eq!(
         res.unwrap_err().exp,
         "[Parser error] Expected 'Welt' at position: '6'"
