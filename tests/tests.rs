@@ -45,7 +45,7 @@ fn optional_test() {
     assert_eq!(res.unwrap().val[0], "Hello World".to_string());
 
     let res = parse("Hello World", optional(string("Hallo World")));
-    assert_eq!(res.unwrap().val[0], String::new());
+    assert_eq!(res.unwrap().val.is_empty(), true);
 }
 
 #[test]

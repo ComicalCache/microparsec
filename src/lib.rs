@@ -155,12 +155,12 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser {
 /// assert_eq!(res.unwrap().val[0], "Hello World".to_string());
 ///
 /// let res = parse("Hello World", optional(string("Hallo World")));
-/// assert_eq!(res.unwrap().val[0], String::new());
+/// assert_eq!(res.unwrap().val.is_empty(), true);
 /// ```
 pub fn optional(parser: Parser) -> Parser {
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
         Ok(res) => Ok(res),
-        Err(_) => Ok(success(ctx, vec![String::new()])),
+        Err(_) => Ok(success(ctx, vec![])),
     })
 }
 
