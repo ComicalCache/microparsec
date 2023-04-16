@@ -18,6 +18,17 @@ pub struct Context {
     pub pos: usize,
 }
 
+impl Context {
+    /// Creates a new Context
+    /// * `txt` - the input string to parse
+    pub fn new<S: AsRef<str>>(txt: S) -> Self {
+        Context {
+            txt: txt.as_ref().to_string(),
+            pos: 0,
+        }
+    }
+}
+
 /// `Success` is a successful parse result
 /// * `val` holds the value of the parse
 /// * `ctx` holds the context of the parse
@@ -444,9 +455,44 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
     })
 }
 
+/// Runs a given parser on a given context.
+/// ### Arguments
+/// * `ctx` - The context to parse
+/// * `parser` - The parser to run
+/// ### Returns
+/// * `Result<Success, String>` containing the result of the parser or the error message
+/// ## Example
+/// ```
+/// #[macro_use] extern crate parse_me;
+/// use parse_me::{map, parse_from_context, string, spaces, sequence, Context};
+///
+/// let res = parse_from_context(Context::new("Hello World"),
+///     map(sequence!(string("Hello"), spaces(), string("World")),
+///         |r| Ok(vec![r.val.join("")]),
+///     ),
+/// );
+///
+/// assert_eq!(
+///     res.unwrap().val,
+///     vec!["Hello World".to_string()]
+/// );
+/// ```
+pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failure> {
+    match parser(ctx) {
+        Ok(res) => Ok(res),
+        Err(err) => {
+            let pos = err.ctx.pos;
+            Err(failure(
+                err.ctx,
+                format!("[Parser error] Expected {} at position: '{pos}'", err.exp),
+            ))
+        }
+    }
+}
+
 /// Runs a given parser on a given string.
 /// ### Arguments
-/// * `txt` - the text to parse
+/// * `txt` - The text to parse
 /// * `parser` - The parser to run
 /// ### Returns
 /// * `Result<Success, String>` containing the result of the parser or the error message
@@ -467,17 +513,11 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 /// );
 /// ```
 pub fn parse<S: AsRef<str>>(txt: S, parser: Parser) -> Result<Success, Failure> {
-    match parser(Context {
-        txt: txt.as_ref().to_string(),
-        pos: 0,
-    }) {
-        Ok(res) => Ok(res),
-        Err(err) => {
-            let pos = err.ctx.pos;
-            Err(failure(
-                err.ctx,
-                format!("[Parser error] Expected {} at position: '{pos}'", err.exp),
-            ))
-        }
-    }
+    parse_from_context(
+        Context {
+            txt: txt.as_ref().to_string(),
+            pos: 0,
+        },
+        parser,
+    )
 }

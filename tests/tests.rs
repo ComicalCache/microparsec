@@ -263,3 +263,30 @@ fn either_test() {
         "[Parser error] Expected any of ['Hello World', 'Hallo Welt'] at position: '0'"
     );
 }
+
+#[test]
+fn parse_from_context_test() {
+    let res = parse_from_context(Context::new("Hello World"), string("Hello World"));
+    assert_eq!(res.unwrap().val[0], "Hello World");
+
+    let res = parse_from_context(
+        Context {
+            txt: "Hello World".to_string(),
+            pos: 6,
+        },
+        string("World"),
+    );
+    assert_eq!(res.unwrap().val[0], "World");
+
+    let res = parse_from_context(
+        Context {
+            txt: "Hello World".to_string(),
+            pos: 6,
+        },
+        string("Welt"),
+    );
+    assert_eq!(
+        res.unwrap_err().exp,
+        "[Parser error] Expected 'Welt' at position: '6'"
+    );
+}
