@@ -64,24 +64,29 @@ pub struct Failure {
 /// Creates a new `Success` object with the given value and context
 /// * `ctx` - the parse context
 /// * `val` - the parsed value
-pub fn success(ctx: Context, val: Vec<String>) -> Success {
+pub fn success(val: Vec<String>, ctx: Context) -> Success {
     Success { val, ctx }
 }
 
-/// Creates a new `Failure` object with the given error message and context
+/// Creates a new `Failure` object with a short error message and context
 /// * `ctx` - the parse context
-/// * `exp` - the exception message
-pub fn failure<S: AsRef<str>>(ctx: Context, exp: S) -> Failure {
+/// * `exp` - a string of what was expected
+pub fn failure<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
     let exp = exp.as_ref().to_string();
     Failure { exp, ctx }
 }
 
-/// Generates a parser error message
-/// * `err` - the error to generate the message from
-pub fn parser_error_message(err: Failure) -> String {
-    format!(
-        "[Parser error] Expected {} at position: '{}'",
-        err.exp, err.ctx.pos
+/// Generates a new `Failure` object with a parser error message and context
+/// * `ctx` - the parse context
+/// * `exp` - a string of what was expected
+pub fn failure_with_error_message<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
+    failure(
+        format!(
+            "[Parser error] Expected {} at position: '{}'",
+            exp.as_ref(),
+            ctx.pos,
+        ),
+        ctx,
     )
 }
 
@@ -104,10 +109,10 @@ pub fn string<S: AsRef<str>>(target: S) -> Parser {
     Box::new(move |mut ctx: Context| {
         if ctx.txt.slice(ctx.pos..).starts_with(&target) {
             ctx.pos += target.len();
-            return Ok(success(ctx, vec![target.clone()]));
+            return Ok(success(vec![target.clone()], ctx));
         }
 
-        return Err(failure(ctx, format!("'{}'", target.clone())));
+        return Err(failure(format!("'{}'", target.clone()), ctx));
     })
 }
 
@@ -146,11 +151,11 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser {
         if let Some(mat) = mat {
             if mat.start() == 0 {
                 ctx.pos += mat.end();
-                return Ok(success(ctx, vec![mat.as_str().to_string()]));
+                return Ok(success(vec![mat.as_str().to_string()], ctx));
             }
         }
 
-        return Err(failure(ctx, format!("'{}'", expected.clone())));
+        return Err(failure(format!("'{}'", expected.clone()), ctx));
     })
 }
 
@@ -173,7 +178,7 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser {
 pub fn optional(parser: Parser) -> Parser {
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
         Ok(res) => Ok(res),
-        Err(_) => Ok(success(ctx, vec![])),
+        Err(_) => Ok(success(vec![], ctx)),
     })
 }
 
@@ -232,7 +237,7 @@ pub fn sequence(parsers: Vec<Parser>) -> Parser {
             };
         }
 
-        return Ok(success(ctx, result));
+        return Ok(success(result, ctx));
     })
 }
 
@@ -283,7 +288,7 @@ pub fn any(parsers: Vec<Parser>) -> Parser {
             }
         }
 
-        return Err(failure(ctx, format!("any of [{}]", errs.join(", "))));
+        return Err(failure(format!("any of [{}]", errs.join(", ")), ctx));
     })
 }
 
@@ -334,8 +339,8 @@ pub fn map(parser: Parser, mapper: fn(Success) -> Result<Vec<String>, String>) -
 
         let ctx = res.ctx.clone();
         match mapper(res) {
-            Ok(mapped) => Ok(success(ctx, mapped)),
-            Err(map_err) => Err(failure(ctx, map_err)),
+            Ok(mapped) => Ok(success(mapped, ctx)),
+            Err(map_err) => Err(failure(map_err, ctx)),
         }
     })
 }
@@ -359,7 +364,7 @@ pub fn many(parser: Parser) -> Parser {
                     ret.append(&mut res.val);
                 }
                 Err(err) if ret.len() == 0 => return Err(err),
-                Err(_) => return Ok(success(ctx, ret)),
+                Err(_) => return Ok(success(ret, ctx)),
             };
         }
     })
@@ -474,7 +479,7 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
         Ok(res) => Ok(res),
-        Err(err) => Err(failure(err.ctx, format!("'{expected}'"))),
+        Err(err) => Err(failure(format!("'{expected}'"), err.ctx)),
     })
 }
 
@@ -503,7 +508,7 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failure> {
     match parser(ctx) {
         Ok(res) => Ok(res),
-        Err(err) => Err(failure(err.ctx.clone(), parser_error_message(err))),
+        Err(err) => Err(failure_with_error_message(err.exp, err.ctx)),
     }
 }
 
