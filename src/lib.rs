@@ -61,6 +61,15 @@ pub struct Failure {
     pub ctx: Context,
 }
 
+impl Failure {
+    pub fn get_error_message(&self) -> String {
+        format!(
+            "[Parser error] Expected {} at position: '{}'",
+            self.exp, self.ctx.pos,
+        )
+    }
+}
+
 /// Creates a new `Success` object with the given value and context
 /// * `ctx` - the parse context
 /// * `val` - the parsed value
@@ -74,20 +83,6 @@ pub fn success(val: Vec<String>, ctx: Context) -> Success {
 pub fn failure<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
     let exp = exp.as_ref().to_string();
     Failure { exp, ctx }
-}
-
-/// Generates a new `Failure` object with a parser error message and context
-/// * `ctx` - the parse context
-/// * `exp` - a string of what was expected
-pub fn failure_with_error_message<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
-    failure(
-        format!(
-            "[Parser error] Expected {} at position: '{}'",
-            exp.as_ref(),
-            ctx.pos,
-        ),
-        ctx,
-    )
 }
 
 /// # String parser
@@ -132,7 +127,7 @@ pub fn string<S: AsRef<str>>(target: S) -> Parser {
 ///
 /// let res = parse("+12 45 6890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
 /// assert_eq!(
-///     res.unwrap_err().exp,
+///     res.unwrap_err().get_error_message(),
 ///     "[Parser error] Expected 'Phone number' at position: '0'"
 /// );
 /// ```
@@ -472,7 +467,7 @@ pub fn float() -> Parser {
 /// use parse_me::{string, expect, parse};
 ///
 /// let res = parse("Hallo Welt", expect(string("Hello World"), "\"Hello World\""));
-/// assert_eq!(res.unwrap_err().exp, "[Parser error] Expected '\"Hello World\"' at position: '0'");
+/// assert_eq!(res.unwrap_err().get_error_message(), "[Parser error] Expected '\"Hello World\"' at position: '0'");
 /// ```
 pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
     let expected = expected.as_ref().to_string();
@@ -508,7 +503,7 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failure> {
     match parser(ctx) {
         Ok(res) => Ok(res),
-        Err(err) => Err(failure_with_error_message(err.exp, err.ctx)),
+        Err(err) => Err(failure(err.exp, err.ctx)),
     }
 }
 
