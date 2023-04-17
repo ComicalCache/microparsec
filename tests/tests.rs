@@ -1,7 +1,7 @@
 use parse_me::*;
 
 fn __test_get_error_message(err: &str, pos: usize) -> String {
-    failure(err, Context::new("", pos)).get_error_message()
+    Failure::new(err, Context::new("", pos)).get_error_message()
 }
 
 #[test]
@@ -133,6 +133,18 @@ fn map_test() {
 }
 
 #[test]
+fn forget_test() {
+    let res = parse("Hello World", forget(string("Hello World")));
+    assert_eq!(res.unwrap().val, ());
+
+    let res = parse("Hallo World", forget(string("Hello World")));
+    assert_eq!(
+        res.unwrap_err().get_error_message(),
+        __test_get_error_message("Hello World", 0)
+    );
+}
+
+#[test]
 fn many_test() {
     let res = parse("Hello World", many(regex(r".{1}", "anything")));
     assert_eq!(res.unwrap().val.join(""), "Hello World");
@@ -165,6 +177,33 @@ fn between_test() {
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("\"", 6)
+    );
+}
+
+#[test]
+fn exact_test() {
+    let res = parse("Hello World", exact(string("Hello World"), Pos::EOI));
+    assert_eq!(res.unwrap().val, "Hello World");
+
+    let res = parse("Hello World", exact(string("Hello Wor"), Pos::Chars(9)));
+    assert_eq!(res.unwrap().val, "Hello Wor");
+
+    let res = parse_from_context(
+        Context::new("Hello World", 2),
+        exact(string("llo World"), Pos::Chars(9)),
+    );
+    assert_eq!(res.unwrap().val, "llo World");
+
+    let res = parse("Hello World.", exact(string("Hello World"), Pos::EOI));
+    assert_eq!(
+        res.unwrap_err().get_error_message(),
+        __test_get_error_message("parsing to EOI", 0)
+    );
+
+    let res = parse("Hello World.", exact(string("Hello World"), Pos::Chars(12)));
+    assert_eq!(
+        res.unwrap_err().get_error_message(),
+        __test_get_error_message("parsing 12 characters", 0)
     );
 }
 

@@ -4,87 +4,8 @@ use regex::Regex;
 mod string_utils;
 use crate::string_utils::StringUtils;
 
-/// Internal parser type
-pub type Parser<T> = Box<dyn Fn(Context) -> Result<Success<T>, Failure>>;
-
-/// Parser context
-/// * `txt` - input string
-/// * `pos` - current position in input string
-#[derive(Debug, Clone)]
-pub struct Context {
-    /// Current input string
-    pub txt: String,
-    /// Current position in input string
-    pub pos: usize,
-}
-
-impl Context {
-    /// Creates a new Context
-    /// * `txt` - The text of the context
-    /// * `pos` - The position in the context
-    pub fn new<S: AsRef<str>>(txt: S, pos: usize) -> Self {
-        Context {
-            txt: txt.as_ref().to_string(),
-            pos,
-        }
-    }
-
-    /// Creates a new Context from a text string
-    /// * `txt` - The text of the context
-    pub fn from<S: AsRef<str>>(txt: S) -> Self {
-        Context {
-            txt: txt.as_ref().to_string(),
-            pos: 0,
-        }
-    }
-}
-
-/// `Success` is a successful parse result
-/// * `val` holds the value of the parse
-/// * `ctx` holds the context of the parse
-#[derive(Debug, Clone)]
-pub struct Success<T> {
-    /// Value of the parse
-    pub val: T,
-    /// Context of the parse
-    pub ctx: Context,
-}
-
-/// `Failure` is a failed parse result
-/// * `exp` holds the error message
-/// * `ctx` holds the context of the parse
-#[derive(Debug, Clone)]
-pub struct Failure {
-    /// Error message
-    pub exp: String,
-    /// Context of the parse
-    pub ctx: Context,
-}
-
-impl Failure {
-    /// Returns a human readable error message of the failure
-    pub fn get_error_message(&self) -> String {
-        format!(
-            "[Parser error] Expected `{}` at position: {}",
-            self.exp, self.ctx.pos,
-        )
-    }
-}
-
-/// Creates a new `Success` object with the given value and context
-/// * `ctx` - the parse context
-/// * `val` - the parsed value
-pub fn success<T>(val: T, ctx: Context) -> Success<T> {
-    Success { val, ctx }
-}
-
-/// Creates a new `Failure` object with a short error message and context
-/// * `ctx` - the parse context
-/// * `exp` - a string of what was expected
-pub fn failure<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
-    let exp = exp.as_ref().to_string();
-    Failure { exp, ctx }
-}
+mod types;
+pub use types::*;
 
 /// # String parser
 /// Parses for a given target string
@@ -105,10 +26,10 @@ pub fn string<S: AsRef<str>>(target: S) -> Parser<String> {
     Box::new(move |mut ctx: Context| {
         if ctx.txt.slice(ctx.pos..).starts_with(&target) {
             ctx.pos += target.len();
-            return Ok(success(target.clone(), ctx));
+            return Ok(Success::new(target.clone(), ctx));
         }
 
-        return Err(failure(format!("{}", target.clone()), ctx));
+        return Err(Failure::new(format!("{}", target.clone()), ctx));
     })
 }
 
@@ -147,11 +68,11 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser<Str
         if let Some(mat) = mat {
             if mat.start() == 0 {
                 ctx.pos += mat.end();
-                return Ok(success(mat.as_str().to_string(), ctx));
+                return Ok(Success::new(mat.as_str().to_string(), ctx));
             }
         }
 
-        return Err(failure(format!("{}", expected.clone()), ctx));
+        return Err(Failure::new(format!("{}", expected.clone()), ctx));
     })
 }
 
@@ -173,8 +94,8 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser<Str
 /// ```
 pub fn optional<T: 'static>(parser: Parser<T>) -> Parser<Option<T>> {
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
-        Ok(res) => Ok(success(Some(res.val), res.ctx)),
-        Err(_) => Ok(success(None, ctx)),
+        Ok(res) => Ok(Success::new(Some(res.val), res.ctx)),
+        Err(_) => Ok(Success::new(None, ctx)),
     })
 }
 
@@ -233,7 +154,7 @@ pub fn sequence<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<Vec<T>> {
             };
         }
 
-        return Ok(success(result, ctx));
+        return Ok(Success::new(result, ctx));
     })
 }
 
@@ -284,7 +205,7 @@ pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
             }
         }
 
-        return Err(failure(format!("{{ `{}` }}", errs.join("` | `")), ctx));
+        return Err(Failure::new(format!("{{ `{}` }}", errs.join("` | `")), ctx));
     })
 }
 
@@ -301,6 +222,7 @@ pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
 ///
 /// let res = parse("Hello World", either(string("Hallo Welt"), string("Hello World")));
 /// assert_eq!(res.unwrap().val, "Hello World");
+/// ```
 pub fn either<T: 'static>(parser_a: Parser<T>, parser_b: Parser<T>) -> Parser<T> {
     any!(parser_a, parser_b)
 }
@@ -338,9 +260,29 @@ pub fn map<T: 'static, M: 'static>(
 
         let ctx = res.ctx.clone();
         match mapper(res) {
-            Ok(mapped) => Ok(success(mapped, ctx)),
-            Err(map_err) => Err(failure(map_err, ctx)),
+            Ok(mapped) => Ok(Success::new(mapped, ctx)),
+            Err(map_err) => Err(Failure::new(map_err, ctx)),
         }
+    })
+}
+
+/// # Forget parser
+/// "Forgets" the success value type and changes it to `()`
+/// ### Arguments
+/// * `parser` - The parser to parse which value to forget
+/// ### Returns
+/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
+/// ## Example
+/// ```
+/// use parse_me::{forget, string, parse};
+///
+/// let res = parse("Hello World", forget(string("Hello World")));
+/// assert_eq!(res.unwrap().val, ());
+/// ```
+pub fn forget<T: 'static>(parser: Parser<T>) -> Parser<()> {
+    Box::new(move |ctx: Context| match parser(ctx) {
+        Ok(res) => Ok(Success::new((), res.ctx)),
+        Err(err) => Err(err),
     })
 }
 
@@ -363,7 +305,7 @@ pub fn many<T: 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
                     ret.push(res.val);
                 }
                 Err(err) if ret.len() == 0 => return Err(err),
-                Err(_) => return Ok(success(ret, ctx)),
+                Err(_) => return Ok(Success::new(ret, ctx)),
             };
         }
     })
@@ -408,7 +350,49 @@ pub fn between<N: 'static, T: 'static, M: 'static>(
             Err(err) => return Err(err),
         };
 
-        Ok(success(res.val, ctx))
+        Ok(Success::new(res.val, ctx))
+    })
+}
+
+/// # Exact parser
+/// Attemts to parse a specified number of chars or to the EOI and fails otherwise
+/// ### Arguments
+/// * `parser` - The parser to parse with
+/// ### Returns
+/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
+/// ## Example
+/// ```
+/// use parse_me::{exact, string, parse, Pos};
+///
+/// let res = parse("Hello World", exact(string("Hello World"), Pos::EOI));
+/// assert_eq!(res.unwrap().val, "Hello World");
+/// ```
+pub fn exact<T: 'static>(parser: Parser<T>, pos: Pos) -> Parser<T> {
+    Box::new(move |ctx: Context| {
+        let prev_pos = ctx.pos;
+        let mut res = match parser(ctx) {
+            Ok(res) => res,
+            Err(err) => return Err(err),
+        };
+
+        match pos {
+            Pos::Chars(x) => {
+                if res.ctx.pos - prev_pos == x {
+                    Ok(res)
+                } else {
+                    res.ctx.pos = prev_pos;
+                    Err(Failure::new(format!("parsing {x} characters"), res.ctx))
+                }
+            }
+            Pos::EOI => {
+                if res.ctx.pos == res.ctx.txt.len() {
+                    Ok(res)
+                } else {
+                    res.ctx.pos = prev_pos;
+                    Err(Failure::new("parsing to EOI", res.ctx))
+                }
+            }
+        }
     })
 }
 
@@ -497,7 +481,7 @@ pub fn expect<T: 'static, S: AsRef<str>>(parser: Parser<T>, expected: S) -> Pars
 
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
         Ok(res) => Ok(res),
-        Err(err) => Err(failure(format!("{expected}"), err.ctx)),
+        Err(err) => Err(Failure::new(format!("{expected}"), err.ctx)),
     })
 }
 
@@ -526,7 +510,7 @@ pub fn expect<T: 'static, S: AsRef<str>>(parser: Parser<T>, expected: S) -> Pars
 pub fn parse_from_context<T>(ctx: Context, parser: Parser<T>) -> Result<Success<T>, Failure> {
     match parser(ctx) {
         Ok(res) => Ok(res),
-        Err(err) => Err(failure(err.exp, err.ctx)),
+        Err(err) => Err(Failure::new(err.exp, err.ctx)),
     }
 }
 
