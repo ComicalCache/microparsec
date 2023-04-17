@@ -62,14 +62,27 @@ pub struct Failure {
 }
 
 /// Creates a new `Success` object with the given value and context
+/// * `ctx` - the parse context
+/// * `val` - the parsed value
 pub fn success(ctx: Context, val: Vec<String>) -> Success {
     Success { val, ctx }
 }
 
 /// Creates a new `Failure` object with the given error message and context
+/// * `ctx` - the parse context
+/// * `exp` - the exception message
 pub fn failure<S: AsRef<str>>(ctx: Context, exp: S) -> Failure {
     let exp = exp.as_ref().to_string();
     Failure { exp, ctx }
+}
+
+/// Generates a parser error message
+/// * `err` - the error to generate the message from
+pub fn parser_error_message(err: Failure) -> String {
+    format!(
+        "[Parser error] Expected {} at position: '{}'",
+        err.exp, err.ctx.pos
+    )
 }
 
 /// # String parser
@@ -490,13 +503,7 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failure> {
     match parser(ctx) {
         Ok(res) => Ok(res),
-        Err(err) => {
-            let pos = err.ctx.pos;
-            Err(failure(
-                err.ctx,
-                format!("[Parser error] Expected {} at position: '{pos}'", err.exp),
-            ))
-        }
+        Err(err) => Err(failure(err.ctx.clone(), parser_error_message(err))),
     }
 }
 
