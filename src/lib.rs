@@ -237,7 +237,7 @@ pub fn either<T: 'static>(parser_a: Parser<T>, parser_b: Parser<T>) -> Parser<T>
 /// ## Example
 /// ```
 /// #[macro_use] extern crate parse_me;
-/// use parse_me::{map, sequence, string, parse};
+/// use parse_me::{map, sequence, string, integer, parse};
 ///
 /// let res = parse(
 ///     "Hello World",
@@ -247,6 +247,9 @@ pub fn either<T: 'static>(parser_a: Parser<T>, parser_b: Parser<T>) -> Parser<T>
 ///     ),
 /// );
 /// assert_eq!(res.unwrap().val, "Hello World");
+///
+/// let res = parse("234", map(integer(), |res| Ok(res.val.parse::<usize>().unwrap())));
+/// assert_eq!(res.unwrap().val, 234);
 /// ```
 pub fn map<T: 'static, M: 'static>(
     parser: Parser<T>,
