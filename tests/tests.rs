@@ -1,32 +1,36 @@
 use parse_me::*;
 
+fn __test_get_error_message(err: &str, pos: usize) -> String {
+    failure(err, Context::new("", pos)).get_error_message()
+}
+
 #[test]
 fn string_test() {
     let res = parse("Hello World", string("Hello World"));
-    assert_eq!(res.unwrap().val[0], "Hello World");
+    assert_eq!(res.unwrap().val, "Hello World");
 
     let res = parse("Hello World", string("Hallo World"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'Hallo World' at position: '0'"
+        __test_get_error_message("Hallo World", 0)
     );
 
     let res = parse("My Hello World", string("Hello World"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'Hello World' at position: '0'"
+        __test_get_error_message("Hello World", 0)
     );
 }
 
 #[test]
 fn regex_test() {
     let res = parse("DE0012 2322 2323", regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"));
-    assert_eq!(res.unwrap().val[0], "DE0012 2322 2323");
+    assert_eq!(res.unwrap().val, "DE0012 2322 2323");
 
     let res = parse("DE012 2322 2323", regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'IBAN' at position: '0'"
+        __test_get_error_message("IBAN", 0)
     );
 
     let res = parse(
@@ -35,17 +39,17 @@ fn regex_test() {
     );
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'IBAN' at position: '0'"
+        __test_get_error_message("IBAN", 0)
     );
 }
 
 #[test]
 fn optional_test() {
     let res = parse("Hello World", optional(string("Hello World")));
-    assert_eq!(res.unwrap().val[0], "Hello World".to_string());
+    assert_eq!(res.unwrap().val.unwrap(), "Hello World".to_string());
 
     let res = parse("Hello World", optional(string("Hallo World")));
-    assert_eq!(res.unwrap().val.is_empty(), true);
+    assert_eq!(res.unwrap().val.is_none(), true);
 }
 
 #[test]
@@ -59,13 +63,13 @@ fn sequence_test() {
     let res = parse("Hello World", sequence!(string("Hallo"), string(" World")));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'Hallo' at position: '0'"
+        __test_get_error_message("Hallo", 0)
     );
 
     let res = parse("Hello World", sequence!(string("Hello"), string("World")));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'World' at position: '5'"
+        __test_get_error_message("World", 5)
     );
 
     let res = parse(
@@ -100,7 +104,7 @@ fn any_test() {
 
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected any of ['Hallo', 'Hola'] at position: '0'"
+        __test_get_error_message("{ `Hallo` | `Hola` }", 0)
     );
 }
 
@@ -115,16 +119,16 @@ fn map_test() {
     );
     assert_eq!(res.unwrap().val, vec!["Hello World".to_string()]);
 
-    let res = parse(
+    let res: Result<Success<()>, Failure> = parse(
         "Hello World",
         map(
             sequence(vec![string("Hello"), string(" "), string("World")]),
-            |_| Err("'mapping()'".to_string()),
+            |_| Err("mapping()".to_string()),
         ),
     );
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'mapping()' at position: '11'"
+        __test_get_error_message("mapping()", 11)
     );
 }
 
@@ -136,7 +140,7 @@ fn many_test() {
     let res = parse("Hello World", many(regex(r"\d{1}", "number")));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'number' at position: '0'"
+        __test_get_error_message("number", 0)
     );
 }
 
@@ -146,13 +150,13 @@ fn between_test() {
         "\"Hello\"",
         between(string("\""), string("Hello"), string("\"")),
     );
-    assert_eq!(res.unwrap().val, vec!["Hello"]);
+    assert_eq!(res.unwrap().val, "Hello");
 
     let res = parse(
         "1Hello\"",
         between(integer(), string("Hello"), string("\"")),
     );
-    assert_eq!(res.unwrap().val, vec!["Hello"]);
+    assert_eq!(res.unwrap().val, "Hello");
 
     let res = parse(
         "\"Hello1",
@@ -160,7 +164,7 @@ fn between_test() {
     );
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected '\"' at position: '6'"
+        __test_get_error_message("\"", 6)
     );
 }
 
@@ -182,7 +186,7 @@ fn spaces_test() {
     );
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected ' ' at position: '5'"
+        __test_get_error_message(" ", 5)
     );
 
     let res = parse(
@@ -198,51 +202,51 @@ fn spaces_test() {
 #[test]
 fn letters_test() {
     let res = parse("Hello", letters());
-    assert_eq!(res.unwrap().val, vec!["Hello"]);
+    assert_eq!(res.unwrap().val, "Hello");
 
     let res = parse("Hello!", letters());
-    assert_eq!(res.unwrap().val, vec!["Hello"]);
+    assert_eq!(res.unwrap().val, "Hello");
 
     let res = parse("1Hello", letters());
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'letters' at position: '0'"
+        __test_get_error_message("letters", 0)
     );
 }
 
 #[test]
 fn integer_test() {
     let res = parse("123456789", integer());
-    assert_eq!(res.unwrap().val, vec!["123456789"]);
+    assert_eq!(res.unwrap().val, "123456789");
 
     let res = parse("a123456789", integer());
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'integer' at position: '0'"
+        __test_get_error_message("integer", 0)
     );
 }
 
 #[test]
 fn float_test() {
     let res = parse("12345.6789", float());
-    assert_eq!(res.unwrap().val, vec!["12345.6789"]);
+    assert_eq!(res.unwrap().val, "12345.6789");
 
     let res = parse("a1234.56789", float());
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'float' at position: '0'"
+        __test_get_error_message("float", 0)
     );
 }
 
 #[test]
 fn expect_test() {
     let res = parse("Hello World", expect(string("Hello"), "\"Hello\""));
-    assert_eq!(res.unwrap().val, vec!["Hello"]);
+    assert_eq!(res.unwrap().val, "Hello");
 
     let res = parse("Hello World", expect(string("Hallo"), "\"Hallo\""));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected '\"Hallo\"' at position: '0'"
+        __test_get_error_message("\"Hallo\"", 0)
     );
 }
 
@@ -252,7 +256,7 @@ fn either_test() {
         "Hello World",
         either(string("Hello World"), string("Hallo Welt")),
     );
-    assert_eq!(res.unwrap().val, vec!["Hello World"]);
+    assert_eq!(res.unwrap().val, "Hello World");
 
     let res = parse(
         "Hola mundo",
@@ -260,21 +264,21 @@ fn either_test() {
     );
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected any of ['Hello World', 'Hallo Welt'] at position: '0'"
+        __test_get_error_message("{ `Hello World` | `Hallo Welt` }", 0)
     );
 }
 
 #[test]
 fn parse_from_context_test() {
     let res = parse_from_context(Context::from("Hello World"), string("Hello World"));
-    assert_eq!(res.unwrap().val[0], "Hello World");
+    assert_eq!(res.unwrap().val, "Hello World");
 
     let res = parse_from_context(Context::new("Hello World", 6), string("World"));
-    assert_eq!(res.unwrap().val[0], "World");
+    assert_eq!(res.unwrap().val, "World");
 
     let res = parse_from_context(Context::new("Hello World", 6), string("Welt"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
-        "[Parser error] Expected 'Welt' at position: '6'"
+        __test_get_error_message("Welt", 6)
     );
 }

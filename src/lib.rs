@@ -5,7 +5,7 @@ mod string_utils;
 use crate::string_utils::StringUtils;
 
 /// Internal parser type
-pub type Parser = Box<dyn Fn(Context) -> Result<Success, Failure>>;
+pub type Parser<T> = Box<dyn Fn(Context) -> Result<Success<T>, Failure>>;
 
 /// Parser context
 /// * `txt` - input string
@@ -43,9 +43,9 @@ impl Context {
 /// * `val` holds the value of the parse
 /// * `ctx` holds the context of the parse
 #[derive(Debug, Clone)]
-pub struct Success {
+pub struct Success<T> {
     /// Value of the parse
-    pub val: Vec<String>,
+    pub val: T,
     /// Context of the parse
     pub ctx: Context,
 }
@@ -62,9 +62,10 @@ pub struct Failure {
 }
 
 impl Failure {
+    /// Returns a human readable error message of the failure
     pub fn get_error_message(&self) -> String {
         format!(
-            "[Parser error] Expected {} at position: '{}'",
+            "[Parser error] Expected `{}` at position: {}",
             self.exp, self.ctx.pos,
         )
     }
@@ -73,7 +74,7 @@ impl Failure {
 /// Creates a new `Success` object with the given value and context
 /// * `ctx` - the parse context
 /// * `val` - the parsed value
-pub fn success(val: Vec<String>, ctx: Context) -> Success {
+pub fn success<T>(val: T, ctx: Context) -> Success<T> {
     Success { val, ctx }
 }
 
@@ -96,18 +97,18 @@ pub fn failure<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
 /// use parse_me::{string, parse};
 ///
 /// let res = parse("Hello World", string("Hello World"));
-/// assert_eq!(res.unwrap().val[0], "Hello World");
+/// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn string<S: AsRef<str>>(target: S) -> Parser {
+pub fn string<S: AsRef<str>>(target: S) -> Parser<String> {
     let target = target.as_ref().to_string();
 
     Box::new(move |mut ctx: Context| {
         if ctx.txt.slice(ctx.pos..).starts_with(&target) {
             ctx.pos += target.len();
-            return Ok(success(vec![target.clone()], ctx));
+            return Ok(success(target.clone(), ctx));
         }
 
-        return Err(failure(format!("'{}'", target.clone()), ctx));
+        return Err(failure(format!("{}", target.clone()), ctx));
     })
 }
 
@@ -123,15 +124,15 @@ pub fn string<S: AsRef<str>>(target: S) -> Parser {
 /// use parse_me::{regex, parse};
 ///
 /// let res = parse("+12 345 67890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
-/// assert_eq!(res.unwrap().val[0], "+12 345 67890");
+/// assert_eq!(res.unwrap().val, "+12 345 67890");
 ///
 /// let res = parse("+12 45 6890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
 /// assert_eq!(
 ///     res.unwrap_err().get_error_message(),
-///     "[Parser error] Expected 'Phone number' at position: '0'"
+///     "[Parser error] Expected `Phone number` at position: 0"
 /// );
 /// ```
-pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser {
+pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser<String> {
     let target = target.as_ref().to_string();
     let expected = expected.as_ref().to_string();
 
@@ -146,16 +147,16 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser {
         if let Some(mat) = mat {
             if mat.start() == 0 {
                 ctx.pos += mat.end();
-                return Ok(success(vec![mat.as_str().to_string()], ctx));
+                return Ok(success(mat.as_str().to_string(), ctx));
             }
         }
 
-        return Err(failure(format!("'{}'", expected.clone()), ctx));
+        return Err(failure(format!("{}", expected.clone()), ctx));
     })
 }
 
 /// # Optional parser
-/// Tries to parse the given parser, but if it fails, it returns a successful result with an empty value
+/// Tries to parse the given parser, but if it fails, it returns a successful result with a None value
 /// ### Arguments
 /// * `parser` - The parser to try to parse
 /// ### Returns
@@ -165,15 +166,15 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser {
 /// use parse_me::{optional, string, parse};
 ///
 /// let res = parse("Hello World", optional(string("Hello World")));
-/// assert_eq!(res.unwrap().val[0], "Hello World".to_string());
+/// assert_eq!(res.unwrap().val.unwrap(), "Hello World");
 ///
 /// let res = parse("Hello World", optional(string("Hallo World")));
-/// assert_eq!(res.unwrap().val.is_empty(), true);
+/// assert_eq!(res.unwrap().val.is_none(), true);
 /// ```
-pub fn optional(parser: Parser) -> Parser {
+pub fn optional<T: 'static>(parser: Parser<T>) -> Parser<Option<T>> {
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
-        Ok(res) => Ok(res),
-        Err(_) => Ok(success(vec![], ctx)),
+        Ok(res) => Ok(success(Some(res.val), res.ctx)),
+        Err(_) => Ok(success(None, ctx)),
     })
 }
 
@@ -219,14 +220,14 @@ macro_rules! sequence {
 ///     vec!["Hello".to_string(), " ".to_string(), "World".to_string()]
 /// );
 /// ```
-pub fn sequence(parsers: Vec<Parser>) -> Parser {
+pub fn sequence<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<Vec<T>> {
     Box::new(move |mut ctx: Context| {
         let mut result = Vec::new();
         for parser in parsers.iter() {
             match parser(ctx.clone()) {
-                Ok(mut res) => {
+                Ok(res) => {
                     ctx = res.ctx;
-                    result.append(&mut res.val);
+                    result.push(res.val);
                 }
                 Err(err) => return Err(err),
             };
@@ -250,7 +251,7 @@ pub fn sequence(parsers: Vec<Parser>) -> Parser {
 /// use parse_me::{any, string, parse};
 ///
 /// let res = parse("Hello World", any!(string("Hallo"), string("Hello")));
-/// assert_eq!(res.unwrap().val, vec!["Hello".to_string()]);
+/// assert_eq!(res.unwrap().val, "Hello");
 /// ```
 #[macro_export]
 macro_rules! any {
@@ -270,9 +271,9 @@ macro_rules! any {
 /// use parse_me::{any, string, parse};
 ///
 /// let res = parse("Hello World", any(vec![string("Hallo"), string("Hello")]));
-/// assert_eq!(res.unwrap().val, vec!["Hello".to_string()]);
+/// assert_eq!(res.unwrap().val, "Hello");
 /// ```
-pub fn any(parsers: Vec<Parser>) -> Parser {
+pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
     Box::new(move |ctx: Context| {
         let mut errs = Vec::new();
 
@@ -283,7 +284,7 @@ pub fn any(parsers: Vec<Parser>) -> Parser {
             }
         }
 
-        return Err(failure(format!("any of [{}]", errs.join(", ")), ctx));
+        return Err(failure(format!("{{ `{}` }}", errs.join("` | `")), ctx));
     })
 }
 
@@ -299,8 +300,8 @@ pub fn any(parsers: Vec<Parser>) -> Parser {
 /// use parse_me::{either, string, parse};
 ///
 /// let res = parse("Hello World", either(string("Hallo Welt"), string("Hello World")));
-/// assert_eq!(res.unwrap().val, vec!["Hello World".to_string()]);
-pub fn either(parser_a: Parser, parser_b: Parser) -> Parser {
+/// assert_eq!(res.unwrap().val, "Hello World");
+pub fn either<T: 'static>(parser_a: Parser<T>, parser_b: Parser<T>) -> Parser<T> {
     any!(parser_a, parser_b)
 }
 
@@ -320,12 +321,15 @@ pub fn either(parser_a: Parser, parser_b: Parser) -> Parser {
 ///     "Hello World",
 ///     map(
 ///         sequence!(string("Hello"), string(" "), string("World")),
-///         |res| Ok(vec![res.val.join("")]),
+///         |res| Ok(res.val.join("")),
 ///     ),
 /// );
-/// assert_eq!(res.unwrap().val, vec!["Hello World".to_string()]);
+/// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn map(parser: Parser, mapper: fn(Success) -> Result<Vec<String>, String>) -> Parser {
+pub fn map<T: 'static, M: 'static>(
+    parser: Parser<T>,
+    mapper: fn(Success<T>) -> Result<M, String>,
+) -> Parser<M> {
     Box::new(move |ctx: Context| {
         let res = match parser(ctx.clone()) {
             Ok(res) => res,
@@ -348,15 +352,15 @@ pub fn map(parser: Parser, mapper: fn(Success) -> Result<Vec<String>, String>) -
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// * Look at the `spaces()` parser implementation for an example
-pub fn many(parser: Parser) -> Parser {
+pub fn many<T: 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
     Box::new(move |mut ctx: Context| {
         let mut ret = Vec::new();
 
         loop {
             match parser(ctx.clone()) {
-                Ok(mut res) => {
+                Ok(res) => {
                     ctx = res.ctx;
-                    ret.append(&mut res.val);
+                    ret.push(res.val);
                 }
                 Err(err) if ret.len() == 0 => return Err(err),
                 Err(_) => return Ok(success(ret, ctx)),
@@ -381,11 +385,30 @@ pub fn many(parser: Parser) -> Parser {
 ///     "\"Hello\"",
 ///     between(string("\""), string("Hello"), string("\"")),
 /// );
-/// assert_eq!(res.unwrap().val, vec!["Hello"]);
+/// assert_eq!(res.unwrap().val, "Hello");
 /// ```
-pub fn between(front: Parser, middle: Parser, back: Parser) -> Parser {
-    map(sequence!(front, middle, back), |v| {
-        Ok(vec![v.val[1].clone()])
+pub fn between<N: 'static, T: 'static, M: 'static>(
+    front: Parser<N>,
+    middle: Parser<T>,
+    back: Parser<M>,
+) -> Parser<T> {
+    Box::new(move |ctx| {
+        let ctx = match front(ctx) {
+            Ok(res) => res.ctx,
+            Err(err) => return Err(err),
+        };
+
+        let res = match middle(ctx) {
+            Ok(res) => res,
+            Err(err) => return Err(err),
+        };
+
+        let ctx = match back(res.ctx) {
+            Ok(res) => res.ctx,
+            Err(err) => return Err(err),
+        };
+
+        Ok(success(res.val, ctx))
     })
 }
 
@@ -407,8 +430,8 @@ pub fn between(front: Parser, middle: Parser, back: Parser) -> Parser {
 ///     vec!["Hello".to_string(), " ".to_string(), "World".to_string()]
 /// );
 /// ```
-pub fn spaces() -> Parser {
-    return map(many(string(" ")), |s| Ok(vec![s.val.join("")]));
+pub fn spaces() -> Parser<String> {
+    return map(many(string(" ")), |s| Ok(s.val.join("")));
 }
 
 /// # Letters parser
@@ -420,9 +443,9 @@ pub fn spaces() -> Parser {
 /// use parse_me::{letters, parse};
 ///
 /// let res = parse("Hello", letters());
-/// assert_eq!(res.unwrap().val, vec!["Hello"]);
+/// assert_eq!(res.unwrap().val, "Hello");
 /// ```
-pub fn letters() -> Parser {
+pub fn letters() -> Parser<String> {
     return regex("[a-zA-Z]+", "letters");
 }
 
@@ -435,9 +458,9 @@ pub fn letters() -> Parser {
 /// use parse_me::{integer, parse};
 ///
 /// let res = parse("123", integer());
-/// assert_eq!(res.unwrap().val, vec!["123"]);
+/// assert_eq!(res.unwrap().val, "123");
 /// ```
-pub fn integer() -> Parser {
+pub fn integer() -> Parser<String> {
     return regex(r"\d+", "integer");
 }
 
@@ -450,9 +473,9 @@ pub fn integer() -> Parser {
 /// use parse_me::{float, parse};
 ///
 /// let res = parse("123.456", float());
-/// assert_eq!(res.unwrap().val, vec!["123.456"]);
+/// assert_eq!(res.unwrap().val, "123.456");
 /// ```
-pub fn float() -> Parser {
+pub fn float() -> Parser<String> {
     return regex(r"\d+\.\d*", "float");
 }
 
@@ -467,14 +490,14 @@ pub fn float() -> Parser {
 /// use parse_me::{string, expect, parse};
 ///
 /// let res = parse("Hallo Welt", expect(string("Hello World"), "\"Hello World\""));
-/// assert_eq!(res.unwrap_err().get_error_message(), "[Parser error] Expected '\"Hello World\"' at position: '0'");
+/// assert_eq!(res.unwrap_err().get_error_message(), "[Parser error] Expected `\"Hello World\"` at position: 0");
 /// ```
-pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
+pub fn expect<T: 'static, S: AsRef<str>>(parser: Parser<T>, expected: S) -> Parser<T> {
     let expected = expected.as_ref().to_string();
 
     Box::new(move |ctx: Context| match parser(ctx.clone()) {
         Ok(res) => Ok(res),
-        Err(err) => Err(failure(format!("'{expected}'"), err.ctx)),
+        Err(err) => Err(failure(format!("{expected}"), err.ctx)),
     })
 }
 
@@ -500,7 +523,7 @@ pub fn expect<S: AsRef<str>>(parser: Parser, expected: S) -> Parser {
 ///     vec!["Hello World".to_string()]
 /// );
 /// ```
-pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failure> {
+pub fn parse_from_context<T>(ctx: Context, parser: Parser<T>) -> Result<Success<T>, Failure> {
     match parser(ctx) {
         Ok(res) => Ok(res),
         Err(err) => Err(failure(err.exp, err.ctx)),
@@ -529,6 +552,6 @@ pub fn parse_from_context(ctx: Context, parser: Parser) -> Result<Success, Failu
 ///     vec!["Hello World".to_string()]
 /// );
 /// ```
-pub fn parse<S: AsRef<str>>(txt: S, parser: Parser) -> Result<Success, Failure> {
+pub fn parse<T, S: AsRef<str>>(txt: S, parser: Parser<T>) -> Result<Success<T>, Failure> {
     parse_from_context(Context::from(txt), parser)
 }
