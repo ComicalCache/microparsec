@@ -1,7 +1,7 @@
 [package]
 name = "parse_me"
-version = "0.5.2"
-edition = "2018"
+version = "0.5.3"
+edition = "2021"
 
 license = "MIT"
 description = "Parser combinator crate. Provides a simple parser combinator crate for Rust."
@@ -11,4 +11,4 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-regex = "1.5.4"
+regex = "1.7.3"
