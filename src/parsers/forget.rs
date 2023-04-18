@@ -1,6 +1,4 @@
-use std::fmt::Display;
-
-use crate::{Context, Failure, Parser, ParserType, Success};
+use crate::{Context, Parser, ParserType, Success};
 
 /// # Forget parser
 /// "Forgets" the success value type and changes it to `()`
@@ -10,18 +8,17 @@ use crate::{Context, Failure, Parser, ParserType, Success};
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{forget, string, parse_str};
+/// use parse_me::{forget, string, parse};
 ///
-/// let res = parse_str::<(), String>("Hello World", forget(string("Hello World")));
+/// let res = parse("Hello World", forget(string("Hello World")));
 /// assert_eq!(res.unwrap().val, ());
 /// ```
-pub fn forget<T: 'static, F: 'static + Display>(parser: Parser<T, F>) -> Parser<(), F> {
+pub fn forget<T: 'static>(parser: Parser<T>) -> Parser<()> {
     Box::new(move |ctx: Context| match parser(ctx) {
         Ok(res) => Ok(Success::new((), res.ctx)),
-        Err(err) => Err(Failure::new(
-            err.exp,
-            err.ctx,
-            Some(ParserType::Forget::<F>),
-        )),
+        Err(mut err) => {
+            err.p_type_stack.push(ParserType::Forget);
+            Err(err)
+        }
     })
 }

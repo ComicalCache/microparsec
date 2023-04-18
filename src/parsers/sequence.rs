@@ -1,6 +1,4 @@
-use std::fmt::Display;
-
-use crate::{Context, Failure, Parser, ParserType, Success};
+use crate::{Context, Parser, ParserType, Success};
 
 /// # Sequence parser
 /// Parses for a sequence of parsers.
@@ -13,9 +11,9 @@ use crate::{Context, Failure, Parser, ParserType, Success};
 /// ## Example
 /// ```
 /// #[macro_use] extern crate parse_me;
-/// use parse_me::{sequence, string, spaces, parse_str};
+/// use parse_me::{sequence, string, spaces, parse};
 ///
-/// let res = parse_str::<Vec<String>, String>("Hello World", sequence!(string("Hello"), spaces(), string("World")));
+/// let res = parse("Hello World", sequence!(string("Hello"), spaces(), string("World")));
 /// assert_eq!(
 ///     res.unwrap().val,
 ///     vec!["Hello".to_string(), " ".to_string(), "World".to_string()]
@@ -36,15 +34,15 @@ macro_rules! sequence {
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{sequence, string, spaces, parse_str};
+/// use parse_me::{sequence, string, spaces, parse};
 ///
-/// let res = parse_str::<Vec<String>, String>("Hello World", sequence(vec![string("Hello"), spaces(), string("World")]));
+/// let res = parse("Hello World", sequence(vec![string("Hello"), spaces(), string("World")]));
 /// assert_eq!(
 ///     res.unwrap().val,
 ///     vec!["Hello".to_string(), " ".to_string(), "World".to_string()]
 /// );
 /// ```
-pub fn sequence<T: 'static, F: 'static + Display>(parsers: Vec<Parser<T, F>>) -> Parser<Vec<T>, F> {
+pub fn sequence<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<Vec<T>> {
     Box::new(move |mut ctx: Context| {
         let mut result = Vec::new();
         for parser in parsers.iter() {
@@ -53,12 +51,9 @@ pub fn sequence<T: 'static, F: 'static + Display>(parsers: Vec<Parser<T, F>>) ->
                     ctx = res.ctx;
                     result.push(res.val);
                 }
-                Err(err) => {
-                    return Err(Failure::new(
-                        err.exp,
-                        err.ctx,
-                        Some(ParserType::Sequence::<F>),
-                    ))
+                Err(mut err) => {
+                    err.p_type_stack.push(ParserType::Sequence);
+                    return Err(err);
                 }
             };
         }

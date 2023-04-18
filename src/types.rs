@@ -1,7 +1,5 @@
-use std::fmt::Display;
-
 /// Internal parser type
-pub type Parser<T, F> = Box<dyn Fn(Context) -> Result<Success<T>, Failure<F>>>;
+pub type Parser<T> = Box<dyn Fn(Context) -> Result<Success<T>, Failure>>;
 
 /// Parser context
 /// * `txt` - input string
@@ -59,24 +57,40 @@ impl<T> Success<T> {
 /// * `exp` holds the error message
 /// * `ctx` holds the context of the parse
 #[derive(Debug, Clone)]
-pub struct Failure<T: Display> {
+pub struct Failure {
     /// Error message
     pub exp: String,
     /// Context of the parse
     pub ctx: Context,
 
-    /// Parser type that caused the failure
-    pub p_type: Option<ParserType<T>>,
+    /// Stack of parsers
+    pub p_type_stack: Vec<ParserType>,
 }
 
-impl<T: Display> Failure<T> {
+impl Failure {
     /// Creates a new `Failure` object with a short error message and context
     /// * `ctx` - the parse context
     /// * `exp` - a string of what was expected
     /// * `p_type` - the type of parser that caused the failure
-    pub fn new<S: AsRef<str>>(exp: S, ctx: Context, p_type: Option<ParserType<T>>) -> Failure<T> {
+    pub fn new<S: AsRef<str>>(exp: S, ctx: Context, p_type_stack: Vec<ParserType>) -> Failure {
         let exp = exp.as_ref().to_string();
-        Failure { exp, ctx, p_type }
+        Failure {
+            exp,
+            ctx,
+            p_type_stack,
+        }
+    }
+
+    /// Creates a new `Failure` object with a short error message and context
+    /// * `ctx` - the parse context
+    /// * `exp` - a string of what was expected
+    pub fn from<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
+        let exp = exp.as_ref().to_string();
+        Failure {
+            exp,
+            ctx,
+            p_type_stack: Vec::new(),
+        }
     }
 
     /// Returns a human readable error message of the failure
@@ -85,17 +99,6 @@ impl<T: Display> Failure<T> {
             "[Parser error] Expected `{}` at position: {}",
             self.exp, self.ctx.pos,
         )
-    }
-}
-
-impl Failure<String> {
-    /// Creates a new `Failure` object with a short error message and context
-    /// * `ctx` - the parse context
-    /// * `exp` - a string of what was expected
-    pub fn from<S: AsRef<str>>(exp: S, ctx: Context) -> Failure<String> {
-        let exp = exp.as_ref().to_string();
-        let p_type: Option<ParserType<String>> = None;
-        Failure { exp, ctx, p_type }
     }
 }
 
@@ -108,8 +111,8 @@ pub enum Pos {
 }
 
 /// The types of parsers
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ParserType<T: Display> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParserType {
     Any,
     Between,
     Either,
@@ -126,7 +129,8 @@ pub enum ParserType<T: Display> {
     Sequence,
     Spaces,
     String,
+    Surely,
 
     /// Custom parsers type can be denoted with a custom type
-    Custom(T),
+    Custom(String),
 }

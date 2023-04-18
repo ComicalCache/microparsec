@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{string_utils::StringUtils, Context, Failure, Parser, ParserType, Success};
 
 /// # String parser
@@ -10,12 +8,12 @@ use crate::{string_utils::StringUtils, Context, Failure, Parser, ParserType, Suc
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{string, parse_str};
+/// use parse_me::{string, parse};
 ///
-/// let res = parse_str::<String, String>("Hello World", string("Hello World"));
+/// let res = parse("Hello World", string("Hello World"));
 /// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn string<F: 'static + Display, S: AsRef<str>>(target: S) -> Parser<String, F> {
+pub fn string<S: AsRef<str>>(target: S) -> Parser<String> {
     let target = target.as_ref().to_string();
 
     Box::new(move |mut ctx: Context| {
@@ -27,7 +25,7 @@ pub fn string<F: 'static + Display, S: AsRef<str>>(target: S) -> Parser<String, 
         return Err(Failure::new(
             format!("{}", target.clone()),
             ctx,
-            Some(ParserType::String),
+            vec![ParserType::String],
         ));
     })
 }

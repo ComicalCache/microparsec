@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{Context, Failure, Parser, ParserType, Pos};
 
 /// # Exact parser
@@ -10,17 +8,20 @@ use crate::{Context, Failure, Parser, ParserType, Pos};
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{exact, string, parse_str, Pos};
+/// use parse_me::{exact, string, parse, Pos};
 ///
-/// let res = parse_str::<String, String>("Hello World", exact(string("Hello World"), Pos::EOI));
+/// let res = parse("Hello World", exact(string("Hello World"), Pos::EOI));
 /// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn exact<T: 'static, F: 'static + Display>(parser: Parser<T, F>, pos: Pos) -> Parser<T, F> {
+pub fn exact<T: 'static>(parser: Parser<T>, pos: Pos) -> Parser<T> {
     Box::new(move |ctx: Context| {
         let prev_pos = ctx.pos;
         let mut res = match parser(ctx) {
             Ok(res) => res,
-            Err(err) => return Err(err),
+            Err(mut err) => {
+                err.p_type_stack.push(ParserType::Exact);
+                return Err(err);
+            }
         };
 
         match pos {
@@ -32,7 +33,7 @@ pub fn exact<T: 'static, F: 'static + Display>(parser: Parser<T, F>, pos: Pos) -
                     Err(Failure::new(
                         format!("parsing {x} characters"),
                         res.ctx,
-                        Some(ParserType::Exact),
+                        vec![ParserType::Exact],
                     ))
                 }
             }
@@ -44,7 +45,7 @@ pub fn exact<T: 'static, F: 'static + Display>(parser: Parser<T, F>, pos: Pos) -
                     Err(Failure::new(
                         "parsing to EOI",
                         res.ctx,
-                        Some(ParserType::Exact),
+                        vec![ParserType::Exact],
                     ))
                 }
             }

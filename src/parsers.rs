@@ -15,9 +15,6 @@ pub use sequence::sequence;
 mod any;
 pub use any::any;
 
-mod either;
-pub use either::either;
-
 mod map;
 pub use map::map;
 
@@ -48,5 +45,5 @@ pub use float::float;
 mod expect;
 pub use expect::expect;
 
-mod failure_type;
-pub use failure_type::{failure_type, failure_type_clone};
+mod surely;
+pub use surely::surely;

@@ -1,6 +1,4 @@
-use std::fmt::Display;
-
-use crate::{Failure, Parser, ParserType, Success};
+use crate::{Parser, ParserType, Success};
 
 /// # Between parser
 /// Parses between two parsers
@@ -12,33 +10,42 @@ use crate::{Failure, Parser, ParserType, Success};
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{between, string, parse_str};
+/// use parse_me::{between, string, parse};
 ///
-/// let res = parse_str::<String, String>(
+/// let res = parse(
 ///     "\"Hello\"",
 ///     between(string("\""), string("Hello"), string("\"")),
 /// );
 /// assert_eq!(res.unwrap().val, "Hello");
 /// ```
-pub fn between<N: 'static, T: 'static, M: 'static, F: 'static + Display>(
-    front: Parser<N, F>,
-    middle: Parser<T, F>,
-    back: Parser<M, F>,
-) -> Parser<T, F> {
+pub fn between<N: 'static, T: 'static, M: 'static>(
+    front: Parser<N>,
+    middle: Parser<T>,
+    back: Parser<M>,
+) -> Parser<T> {
     Box::new(move |ctx| {
         let ctx = match front(ctx) {
             Ok(res) => res.ctx,
-            Err(err) => return Err(Failure::new(err.exp, err.ctx, Some(ParserType::Between))),
+            Err(mut err) => {
+                err.p_type_stack.push(ParserType::Between);
+                return Err(err);
+            }
         };
 
         let res = match middle(ctx) {
             Ok(res) => res,
-            Err(err) => return Err(Failure::new(err.exp, err.ctx, Some(ParserType::Between))),
+            Err(mut err) => {
+                err.p_type_stack.push(ParserType::Between);
+                return Err(err);
+            }
         };
 
         let ctx = match back(res.ctx) {
             Ok(res) => res.ctx,
-            Err(err) => return Err(Failure::new(err.exp, err.ctx, Some(ParserType::Between))),
+            Err(mut err) => {
+                err.p_type_stack.push(ParserType::Between);
+                return Err(err);
+            }
         };
 
         Ok(Success::new(res.val, ctx))

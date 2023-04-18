@@ -3,7 +3,6 @@
 mod string_utils;
 
 mod types;
-use std::fmt::Display;
 
 pub use types::*;
 
@@ -21,7 +20,7 @@ pub use parsers::*;
 /// #[macro_use] extern crate parse_me;
 /// use parse_me::{map, parse_from_context, string, spaces, sequence, Context};
 ///
-/// let res = parse_from_context::<String, String>(Context::from("Hello World"),
+/// let res = parse_from_context(Context::from("Hello World"),
 ///     map(sequence!(string("Hello"), spaces(), string("World")),
 ///         |r| Ok(r.val.join("")),
 ///     ),
@@ -29,10 +28,7 @@ pub use parsers::*;
 ///
 /// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn parse_from_context<T, F: Display>(
-    ctx: Context,
-    parser: Parser<T, F>,
-) -> Result<Success<T>, Failure<F>> {
+pub fn parse_from_context<T>(ctx: Context, parser: Parser<T>) -> Result<Success<T>, Failure> {
     match parser(ctx) {
         Ok(res) => Ok(res),
         Err(err) => Err(err),
@@ -58,29 +54,6 @@ pub fn parse_from_context<T, F: Display>(
 ///
 /// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn parse<T, F: Display>(txt: String, parser: Parser<T, F>) -> Result<Success<T>, Failure<F>> {
-    parse_from_context(Context::from(txt), parser)
-}
-
-/// Runs a given parser on a given &str
-/// ### Arguments
-/// * `txt` - The text to parse
-/// * `parser` - The parser to run
-/// ### Returns
-/// * `Result<Success, String>` containing the result of the parser or the error message
-/// ## Example
-/// ```
-/// #[macro_use] extern crate parse_me;
-/// use parse_me::{map, parse_str, string, spaces, sequence};
-///
-/// let res = parse_str::<String, String>("Hello World",
-///     map(sequence!(string("Hello"), spaces(), string("World")),
-///         |r| Ok(r.val.join("")),
-///     ),
-/// );
-///
-/// assert_eq!(res.unwrap().val, "Hello World");
-/// ```
-pub fn parse_str<T, F: Display>(txt: &str, parser: Parser<T, F>) -> Result<Success<T>, Failure<F>> {
+pub fn parse<S: AsRef<str>, T>(txt: S, parser: Parser<T>) -> Result<Success<T>, Failure> {
     parse_from_context(Context::from(txt), parser)
 }

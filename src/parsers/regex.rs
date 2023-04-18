@@ -1,8 +1,6 @@
-use std::fmt::Display;
-
 use regex::Regex;
 
-use crate::{Parser, Context, string_utils::StringUtils, Success, Failure, ParserType};
+use crate::{string_utils::StringUtils, Context, Failure, Parser, ParserType, Success};
 
 /// # Regex parser
 /// Parses for a given regex pattern
@@ -13,21 +11,18 @@ use crate::{Parser, Context, string_utils::StringUtils, Success, Failure, Parser
 /// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{regex, parse_str};
+/// use parse_me::{regex, parse};
 ///
-/// let res = parse_str::<String, String>("+12 345 67890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
+/// let res = parse("+12 345 67890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
 /// assert_eq!(res.unwrap().val, "+12 345 67890");
 ///
-/// let res = parse_str::<String, String>("+12 45 6890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
+/// let res = parse("+12 45 6890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
 /// assert_eq!(
 ///     res.unwrap_err().get_error_message(),
 ///     "[Parser error] Expected `Phone number` at position: 0"
 /// );
 /// ```
-pub fn regex<F: 'static + Display, A: AsRef<str>, B: AsRef<str>>(
-    target: A,
-    expected: B,
-) -> Parser<String, F> {
+pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser<String> {
     let target = target.as_ref().to_string();
     let expected = expected.as_ref().to_string();
 
@@ -49,7 +44,7 @@ pub fn regex<F: 'static + Display, A: AsRef<str>, B: AsRef<str>>(
         return Err(Failure::new(
             format!("{}", expected.clone()),
             ctx,
-            Some(ParserType::Regex),
+            vec![ParserType::Regex],
         ));
     })
 }
