@@ -1,21 +1,21 @@
 use parse_me::*;
 
 fn __test_get_error_message(err: &str, pos: usize) -> String {
-    Failure::new(err, Context::new("", pos)).get_error_message()
+    Failure::from(err, Context::new("", pos)).get_error_message()
 }
 
 #[test]
 fn string_test() {
-    let res = parse("Hello World", string("Hello World"));
+    let res = parse_str::<String, String>("Hello World", string("Hello World"));
     assert_eq!(res.unwrap().val, "Hello World");
 
-    let res = parse("Hello World", string("Hallo World"));
+    let res = parse_str::<String, String>("Hello World", string("Hallo World"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("Hallo World", 0)
     );
 
-    let res = parse("My Hello World", string("Hello World"));
+    let res = parse_str::<String, String>("My Hello World", string("Hello World"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("Hello World", 0)
@@ -24,16 +24,18 @@ fn string_test() {
 
 #[test]
 fn regex_test() {
-    let res = parse("DE0012 2322 2323", regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"));
+    let res =
+        parse_str::<String, String>("DE0012 2322 2323", regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"));
     assert_eq!(res.unwrap().val, "DE0012 2322 2323");
 
-    let res = parse("DE012 2322 2323", regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"));
+    let res =
+        parse_str::<String, String>("DE012 2322 2323", regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("IBAN", 0)
     );
 
-    let res = parse(
+    let res = parse_str::<String, String>(
         "Bank account: DE012 2322 2323",
         regex(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN"),
     );
@@ -45,34 +47,43 @@ fn regex_test() {
 
 #[test]
 fn optional_test() {
-    let res = parse("Hello World", optional(string("Hello World")));
+    let res = parse_str::<Option<String>, String>("Hello World", optional(string("Hello World")));
     assert_eq!(res.unwrap().val.unwrap(), "Hello World".to_string());
 
-    let res = parse("Hello World", optional(string("Hallo World")));
+    let res = parse_str::<Option<String>, String>("Hello World", optional(string("Hallo World")));
     assert_eq!(res.unwrap().val.is_none(), true);
 }
 
 #[test]
 fn sequence_test() {
-    let res = parse("Hello World", sequence!(string("Hello"), string(" World")));
+    let res = parse_str::<Vec<String>, String>(
+        "Hello World",
+        sequence!(string("Hello"), string(" World")),
+    );
     assert_eq!(
         res.unwrap().val,
         vec!["Hello".to_string(), " World".to_string()]
     );
 
-    let res = parse("Hello World", sequence!(string("Hallo"), string(" World")));
+    let res = parse_str::<Vec<String>, String>(
+        "Hello World",
+        sequence!(string("Hallo"), string(" World")),
+    );
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("Hallo", 0)
     );
 
-    let res = parse("Hello World", sequence!(string("Hello"), string("World")));
+    let res = parse_str::<Vec<String>, String>(
+        "Hello World",
+        sequence!(string("Hello"), string("World")),
+    );
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("World", 5)
     );
 
-    let res = parse(
+    let res = parse_str::<Vec<String>, String>(
         "Hello World",
         sequence!(string("Hello"), string(" "), string("World")),
     );
@@ -84,7 +95,7 @@ fn sequence_test() {
 
 #[test]
 fn any_test() {
-    let res = parse(
+    let res = parse_str::<Vec<String>, String>(
         "Hello World",
         sequence(vec![
             any(vec![string("Hallo"), string("Hello")]),
@@ -97,7 +108,7 @@ fn any_test() {
         vec!["Hello".to_string(), " World".to_string()]
     );
 
-    let res = parse(
+    let res = parse_str::<Vec<String>, String>(
         "Hello World",
         sequence!(any(vec![string("Hallo"), string("Hola")]), string(" World")),
     );
@@ -110,16 +121,16 @@ fn any_test() {
 
 #[test]
 fn map_test() {
-    let res = parse(
+    let res = parse_str::<String, String>(
         "Hello World",
         map(
             sequence(vec![string("Hello"), string(" "), string("World")]),
-            |res| Ok(vec![res.val.join("")]),
+            |res| Ok(res.val.join("")),
         ),
     );
-    assert_eq!(res.unwrap().val, vec!["Hello World".to_string()]);
+    assert_eq!(res.unwrap().val, "Hello World".to_string());
 
-    let res: Result<Success<()>, Failure> = parse(
+    let res = parse_str::<(), String>(
         "Hello World",
         map(
             sequence(vec![string("Hello"), string(" "), string("World")]),
@@ -134,10 +145,10 @@ fn map_test() {
 
 #[test]
 fn forget_test() {
-    let res = parse("Hello World", forget(string("Hello World")));
+    let res = parse_str::<(), String>("Hello World", forget(string("Hello World")));
     assert_eq!(res.unwrap().val, ());
 
-    let res = parse("Hallo World", forget(string("Hello World")));
+    let res = parse_str::<(), String>("Hallo World", forget(string("Hello World")));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("Hello World", 0)
@@ -146,10 +157,10 @@ fn forget_test() {
 
 #[test]
 fn many_test() {
-    let res = parse("Hello World", many(regex(r".{1}", "anything")));
+    let res = parse_str::<Vec<String>, String>("Hello World", many(regex(r".{1}", "anything")));
     assert_eq!(res.unwrap().val.join(""), "Hello World");
 
-    let res = parse("Hello World", many(regex(r"\d{1}", "number")));
+    let res = parse_str::<Vec<String>, String>("Hello World", many(regex(r"\d{1}", "number")));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("number", 0)
@@ -158,19 +169,19 @@ fn many_test() {
 
 #[test]
 fn between_test() {
-    let res = parse(
+    let res = parse_str::<String, String>(
         "\"Hello\"",
         between(string("\""), string("Hello"), string("\"")),
     );
     assert_eq!(res.unwrap().val, "Hello");
 
-    let res = parse(
+    let res = parse_str::<String, String>(
         "1Hello\"",
         between(integer(), string("Hello"), string("\"")),
     );
     assert_eq!(res.unwrap().val, "Hello");
 
-    let res = parse(
+    let res = parse_str::<String, String>(
         "\"Hello1",
         between(string("\""), string("Hello"), string("\"")),
     );
@@ -182,25 +193,26 @@ fn between_test() {
 
 #[test]
 fn exact_test() {
-    let res = parse("Hello World", exact(string("Hello World"), Pos::EOI));
+    let res = parse_str::<String, String>("Hello World", exact(string("Hello World"), Pos::EOI));
     assert_eq!(res.unwrap().val, "Hello World");
 
-    let res = parse("Hello World", exact(string("Hello Wor"), Pos::Chars(9)));
+    let res = parse_str::<String, String>("Hello World", exact(string("Hello Wor"), Pos::Chars(9)));
     assert_eq!(res.unwrap().val, "Hello Wor");
 
-    let res = parse_from_context(
+    let res = parse_from_context::<String, String>(
         Context::new("Hello World", 2),
         exact(string("llo World"), Pos::Chars(9)),
     );
     assert_eq!(res.unwrap().val, "llo World");
 
-    let res = parse("Hello World.", exact(string("Hello World"), Pos::EOI));
+    let res = parse_str::<String, String>("Hello World.", exact(string("Hello World"), Pos::EOI));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("parsing to EOI", 0)
     );
 
-    let res = parse("Hello World.", exact(string("Hello World"), Pos::Chars(12)));
+    let res =
+        parse_str::<String, String>("Hello World.", exact(string("Hello World"), Pos::Chars(12)));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("parsing 12 characters", 0)
@@ -209,7 +221,7 @@ fn exact_test() {
 
 #[test]
 fn spaces_test() {
-    let res = parse(
+    let res = parse_str::<Vec<String>, String>(
         "Hello World",
         sequence(vec![string("Hello"), spaces(), string("World")]),
     );
@@ -219,7 +231,7 @@ fn spaces_test() {
         vec!["Hello".to_string(), " ".to_string(), "World".to_string()]
     );
 
-    let res = parse(
+    let res = parse_str::<Vec<String>, String>(
         "HelloWorld",
         sequence(vec![string("Hello"), spaces(), string("World")]),
     );
@@ -228,7 +240,7 @@ fn spaces_test() {
         __test_get_error_message(" ", 5)
     );
 
-    let res = parse(
+    let res = parse_str::<Vec<String>, String>(
         "Hello    World",
         sequence(vec![string("Hello"), spaces(), string("World")]),
     );
@@ -240,13 +252,13 @@ fn spaces_test() {
 
 #[test]
 fn letters_test() {
-    let res = parse("Hello", letters());
+    let res = parse_str::<String, String>("Hello", letters());
     assert_eq!(res.unwrap().val, "Hello");
 
-    let res = parse("Hello!", letters());
+    let res = parse_str::<String, String>("Hello!", letters());
     assert_eq!(res.unwrap().val, "Hello");
 
-    let res = parse("1Hello", letters());
+    let res = parse_str::<String, String>("1Hello", letters());
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("letters", 0)
@@ -255,10 +267,10 @@ fn letters_test() {
 
 #[test]
 fn integer_test() {
-    let res = parse("123456789", integer());
+    let res = parse_str::<String, String>("123456789", integer());
     assert_eq!(res.unwrap().val, "123456789");
 
-    let res = parse("a123456789", integer());
+    let res = parse_str::<String, String>("a123456789", integer());
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("integer", 0)
@@ -267,10 +279,10 @@ fn integer_test() {
 
 #[test]
 fn float_test() {
-    let res = parse("12345.6789", float());
+    let res = parse_str::<String, String>("12345.6789", float());
     assert_eq!(res.unwrap().val, "12345.6789");
 
-    let res = parse("a1234.56789", float());
+    let res = parse_str::<String, String>("a1234.56789", float());
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("float", 0)
@@ -279,10 +291,10 @@ fn float_test() {
 
 #[test]
 fn expect_test() {
-    let res = parse("Hello World", expect(string("Hello"), "\"Hello\""));
+    let res = parse_str::<String, String>("Hello World", expect(string("Hello"), "\"Hello\""));
     assert_eq!(res.unwrap().val, "Hello");
 
-    let res = parse("Hello World", expect(string("Hallo"), "\"Hallo\""));
+    let res = parse_str::<String, String>("Hello World", expect(string("Hallo"), "\"Hallo\""));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("\"Hallo\"", 0)
@@ -291,13 +303,13 @@ fn expect_test() {
 
 #[test]
 fn either_test() {
-    let res = parse(
+    let res = parse_str::<String, String>(
         "Hello World",
         either(string("Hello World"), string("Hallo Welt")),
     );
     assert_eq!(res.unwrap().val, "Hello World");
 
-    let res = parse(
+    let res = parse_str::<String, String>(
         "Hola mundo",
         either(string("Hello World"), string("Hallo Welt")),
     );
@@ -309,15 +321,58 @@ fn either_test() {
 
 #[test]
 fn parse_from_context_test() {
-    let res = parse_from_context(Context::from("Hello World"), string("Hello World"));
+    let res =
+        parse_from_context::<String, String>(Context::from("Hello World"), string("Hello World"));
     assert_eq!(res.unwrap().val, "Hello World");
 
-    let res = parse_from_context(Context::new("Hello World", 6), string("World"));
+    let res = parse_from_context::<String, String>(Context::new("Hello World", 6), string("World"));
     assert_eq!(res.unwrap().val, "World");
 
-    let res = parse_from_context(Context::new("Hello World", 6), string("Welt"));
+    let res = parse_from_context::<String, String>(Context::new("Hello World", 6), string("Welt"));
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("Welt", 6)
+    );
+}
+
+#[test]
+fn failure_type_test() {
+    let res = parse_str::<String, &'static str>(
+        "Hello World",
+        failure_type(string("Hallo Welt"), None::<ParserType<&'static str>>),
+    );
+    assert_eq!(res.unwrap_err().p_type, None);
+
+    let res = parse_str::<String, &str>(
+        "Hello World",
+        failure_type(
+            string("Hallo Welt"),
+            Some(ParserType::Custom("Hallo Welt parser")),
+        ),
+    );
+    assert_eq!(
+        res.unwrap_err().p_type,
+        Some(ParserType::Custom("Hallo Welt parser"))
+    );
+}
+
+#[test]
+fn failure_type_clone_test() {
+    let res = parse_str::<String, String>(
+        "Hello World",
+        failure_type_clone(string("Hallo Welt"), None::<ParserType<String>>),
+    );
+    assert_eq!(res.unwrap_err().p_type, None);
+
+    let res = parse_str::<String, String>(
+        "Hello World",
+        failure_type_clone(
+            string("Hallo Welt"),
+            Some(ParserType::Custom("Hallo Welt parser".to_string())),
+        ),
+    );
+    assert_eq!(
+        res.unwrap_err().p_type,
+        Some(ParserType::Custom("Hallo Welt parser".to_string()))
     );
 }

@@ -1,5 +1,7 @@
+use std::fmt::Display;
+
 /// Internal parser type
-pub type Parser<T> = Box<dyn Fn(Context) -> Result<Success<T>, Failure>>;
+pub type Parser<T, F> = Box<dyn Fn(Context) -> Result<Success<T>, Failure<F>>>;
 
 /// Parser context
 /// * `txt` - input string
@@ -57,20 +59,24 @@ impl<T> Success<T> {
 /// * `exp` holds the error message
 /// * `ctx` holds the context of the parse
 #[derive(Debug, Clone)]
-pub struct Failure {
+pub struct Failure<T: Display> {
     /// Error message
     pub exp: String,
     /// Context of the parse
     pub ctx: Context,
+
+    /// Parser type that caused the failure
+    pub p_type: Option<ParserType<T>>,
 }
 
-impl Failure {
+impl<T: Display> Failure<T> {
     /// Creates a new `Failure` object with a short error message and context
     /// * `ctx` - the parse context
     /// * `exp` - a string of what was expected
-    pub fn new<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
+    /// * `p_type` - the type of parser that caused the failure
+    pub fn new<S: AsRef<str>>(exp: S, ctx: Context, p_type: Option<ParserType<T>>) -> Failure<T> {
         let exp = exp.as_ref().to_string();
-        Failure { exp, ctx }
+        Failure { exp, ctx, p_type }
     }
 
     /// Returns a human readable error message of the failure
@@ -82,10 +88,45 @@ impl Failure {
     }
 }
 
+impl Failure<String> {
+    /// Creates a new `Failure` object with a short error message and context
+    /// * `ctx` - the parse context
+    /// * `exp` - a string of what was expected
+    pub fn from<S: AsRef<str>>(exp: S, ctx: Context) -> Failure<String> {
+        let exp = exp.as_ref().to_string();
+        let p_type: Option<ParserType<String>> = None;
+        Failure { exp, ctx, p_type }
+    }
+}
+
 /// Enum used to determine the *relative* position to parse to in the `exact` parser
 pub enum Pos {
     /// Parse `x` characters
     Chars(usize),
     /// Parse until the end of input
     EOI,
+}
+
+/// The types of parsers
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ParserType<T: Display> {
+    Any,
+    Between,
+    Either,
+    Exact,
+    Expect,
+    Float,
+    Forget,
+    Integer,
+    Letters,
+    Many,
+    Map,
+    Optional,
+    Regex,
+    Sequence,
+    Spaces,
+    String,
+
+    /// Custom parsers type can be denoted with a custom type
+    Custom(T),
 }
