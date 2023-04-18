@@ -311,3 +311,86 @@ fn parse_from_context_test() {
         __test_get_error_message("Welt", 6)
     );
 }
+
+#[test]
+fn surely_test() {
+    let res = parse(
+        "Hello World",
+        any!(string("Hallo"), surely(string("Hello"))),
+    );
+    assert_eq!(res.unwrap().val, "Hello");
+
+    let res = parse(
+        "Hello World",
+        any!(string("Hallo"), surely(string("Hola")), string("Hello")),
+    );
+    assert_eq!(
+        res.unwrap_err().get_error_message(),
+        __test_get_error_message("surely `Hola`", 0)
+    );
+
+    let res = parse(
+        "Hello Welt",
+        any!(
+            sequence!(string("Hello"), spaces(), surely(string("World"))),
+            sequence!(string("Hallo"), spaces(), surely(string("Welt")))
+        ),
+    );
+    assert_eq!(
+        res.unwrap_err().get_error_message(),
+        __test_get_error_message("surely `World`", 6)
+    );
+}
+
+#[test]
+fn p_type_stack_test() {
+    let res = parse(
+        "Hello World",
+        sequence!(string("Hello"), spaces(), string("Welt")),
+    );
+
+    assert_eq!(
+        res.clone().unwrap_err().p_type_stack,
+        vec![ParserType::String, ParserType::Sequence]
+    );
+    assert_eq!(
+        res.unwrap_err().get_error_message_stack_trace(),
+        "[Parser error] Expected `Welt` at position: 6\n\nCall Stack:\n2. `string` parser\n1. `sequence` parser"
+    );
+
+    let res = parse(
+        "Hello Welt",
+        any!(
+            sequence!(string("Hello"), spaces(), surely(string("World"))),
+            sequence!(string("Hallo"), spaces(), surely(string("Welt")))
+        ),
+    );
+    assert_eq!(
+        res.clone().unwrap_err().p_type_stack,
+        vec![
+            ParserType::String,
+            ParserType::Surely,
+            ParserType::Sequence,
+            ParserType::Any
+        ]
+    );
+    assert_eq!(
+        res.unwrap_err().get_error_message_stack_trace(),
+        "[Parser error] Expected `surely `World`` at position: 6\n\nCall Stack:\n4. `string` parser\n3. `surely` parser\n2. `sequence` parser\n1. `any` parser"
+    );
+
+    let res = parse("Hello", any!(string("Hi"), string("Hallo"), integer()));
+    assert_eq!(
+        res.clone().unwrap_err().p_type_stack,
+        vec![
+            ParserType::Integer,
+            ParserType::String,
+            ParserType::String,
+            ParserType::Any
+        ]
+    );
+    assert_eq!(
+        res.unwrap_err().get_error_message_stack_trace(),
+        "[Parser error] Expected `{ `Hi` | `Hallo` | `integer` }` at position: 0\n\nCall Stack:\n4. `integer` parser\n3. `string` parser\n2. `string` parser\n1. `any` parser"
+    );
+}

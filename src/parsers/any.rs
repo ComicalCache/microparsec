@@ -59,6 +59,7 @@ pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
             }
         }
 
+        err_p_types.reverse();
         err_p_types.push(ParserType::Any);
         return Err(Failure::new(
             format!("{{ `{}` }}", err_exps.join("` | `")),

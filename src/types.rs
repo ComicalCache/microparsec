@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// Internal parser type
 pub type Parser<T> = Box<dyn Fn(Context) -> Result<Success<T>, Failure>>;
 
@@ -100,6 +102,22 @@ impl Failure {
             self.exp, self.ctx.pos,
         )
     }
+
+    /// Returns a human readable error message of the failure with stack trace
+    pub fn get_error_message_stack_trace(&self) -> String {
+        let offset = self.p_type_stack.len();
+        let call_stack = self
+            .p_type_stack
+            .iter()
+            .enumerate()
+            .map(|(i, e)| format!("{}. `{e}` parser", offset - i))
+            .collect::<Vec<String>>()
+            .join("\n");
+        format!(
+            "[Parser error] Expected `{}` at position: {}\n\nCall Stack:\n{call_stack}",
+            self.exp, self.ctx.pos,
+        )
+    }
 }
 
 /// Enum used to determine the *relative* position to parse to in the `exact` parser
@@ -133,4 +151,31 @@ pub enum ParserType {
 
     /// Custom parsers type can be denoted with a custom type
     Custom(String),
+}
+
+impl Display for ParserType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            ParserType::Any => "any",
+            ParserType::Between => "between",
+            ParserType::Either => "either",
+            ParserType::Exact => "exact",
+            ParserType::Expect => "expect",
+            ParserType::Float => "float",
+            ParserType::Forget => "forget",
+            ParserType::Integer => "integer",
+            ParserType::Letters => "letters",
+            ParserType::Many => "many",
+            ParserType::Map => "map",
+            ParserType::Optional => "optional",
+            ParserType::Regex => "regex",
+            ParserType::Sequence => "sequence",
+            ParserType::Spaces => "spaces",
+            ParserType::String => "string",
+            ParserType::Surely => "surely",
+            ParserType::Custom(parser) => parser.as_ref(),
+        };
+
+        write!(f, "{str}")
+    }
 }
