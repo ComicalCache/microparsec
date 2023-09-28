@@ -1,27 +1,47 @@
-use crate::{regex, Context, Parser, ParserType};
+use crate::{Context, ParserType, ContextParserT, StringParserT, Success, Failure, RegexParser};
 
-/// # Spaces parser
 /// Parses for at least one and as many spaces as possible
-/// # Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// #[macro_use] extern crate parse_me;
-/// use parse_me::{spaces, string, parse, sequence};
+/// use parse_me::{ParserRc, SpacesParser, StringParser, SequenceParser, StringParserT, ContextParserT, parsers};
 ///
-/// let res = parse("Hello World", sequence!(string("Hello"), spaces(), string("World")));
+/// let hello_parser = StringParser::new("Hello");
+/// let spaces_parser = SpacesParser::new();
+/// let world_parser = StringParser::new("World");
+/// let res = SequenceParser::new(parsers!(hello_parser, spaces_parser, world_parser)).parse("Hello  World");
 ///
 /// assert_eq!(
 ///     res.unwrap().val,
-///     vec!["Hello".to_string(), " ".to_string(), "World".to_string()]
+///     vec!["Hello".to_string(), "  ".to_string(), "World".to_string()]
 /// );
 /// ```
-pub fn spaces() -> Parser<String> {
-    Box::new(move |ctx: Context| match regex("[ ]+", "spaces")(ctx) {
-        Ok(res) => Ok(res),
-        Err(mut err) => {
-            err.p_type_stack.push(ParserType::Spaces);
-            Err(err)
-        }
-    })
+#[derive(Clone)]
+pub struct SpacesParser {}
+
+impl SpacesParser {
+    pub fn new() -> Self {
+        SpacesParser {}
+    }
 }
+
+impl ContextParserT<String> for SpacesParser {
+    fn get_generic_error_message(&self) -> String {
+        "spaces".to_string()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::Spaces
+    }
+
+    fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
+        match RegexParser::new("[ ]+", "spaces").parse_from_context(ctx) {
+            Ok(res) => Ok(res),
+            Err(mut err) => {
+                err.p_type_stack.push(ParserType::Spaces);
+                Err(err)
+            }
+        }
+    }
+}
+
+impl StringParserT<String> for SpacesParser {}

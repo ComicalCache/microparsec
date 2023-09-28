@@ -1,51 +1,51 @@
-use crate::{Context, Failure, Parser, ParserType};
+use crate::{ParserRc, Context, Failure, ContextParserT, ParserType, Success, StringParserT};
 
-/// # Any parser
-/// Parses for any of the given parsers and returns the first successful result, or an error if no parser matched
-///
-/// Convenience macro, works identical to `any()` but without having to manually create a vector.
-/// ### Arguments
-/// * `parsers` - The parsers to parse for
-/// ### Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
-/// ## Example
+/// Parses for any of the supplied parsers and returns the first successful result,
+/// or an error if no parser matched.
+/// ### Example
 /// ```
-/// #[macro_use] extern crate parse_me;
-/// use parse_me::{any, string, parse};
+/// use parse_me::{ParserRc, AnyParser, StringParser, ContextParserT, StringParserT, parsers};
 ///
-/// let res = parse("Hello World", any!(string("Hallo"), string("Hello")));
+/// let hello_parser = StringParser::new("Hello");
+/// let hallo_parser = StringParser::new("Hallo");
+/// let res = AnyParser::new(parsers!(hallo_parser, hello_parser)).parse("Hello World");
 /// assert_eq!(res.unwrap().val, "Hello");
 /// ```
-#[macro_export]
-macro_rules! any {
-    ($p:ident) => {
-        any($p)
-    };
-    ($($p:expr),+) => {
-        any(vec![$($p),*])
-    };
+#[derive(Clone)]
+pub struct AnyParser<T> {
+    parsers: Vec<ParserRc<dyn ContextParserT<T>>>,
+    generic_error: String,
 }
 
-/// # Any parser
-/// Parses for any of the given parsers and returns the first successful result, or an error if no parser matched
-/// ### Arguments
-/// * `parsers` - The parsers to parse for
-/// ### Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
-/// ## Example
-/// ```
-/// use parse_me::{any, string, parse};
-///
-/// let res = parse("Hello World", any(vec![string("Hallo"), string("Hello")]));
-/// assert_eq!(res.unwrap().val, "Hello");
-/// ```
-pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
-    Box::new(move |ctx: Context| {
+impl<T> AnyParser<T> {
+    pub fn new(parsers: Vec<ParserRc<dyn ContextParserT<T>>>) -> Self {
+        let generic_error = format!(
+            "{{ `{}` }}",
+            parsers.iter()
+                .map(|p| p.get_generic_error_message().to_string())
+                .collect::<Vec<String>>()
+                .join("` | `")
+        );
+
+        AnyParser { parsers, generic_error }
+    }
+}
+
+impl<T> ContextParserT<T> for AnyParser<T> {
+    fn get_generic_error_message(&self) -> String {
+        self.generic_error.clone()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::Any
+    }
+
+    fn parse_from_context(&self, ctx: Context) -> Result<Success<T>, Failure> {
         let mut err_exps = Vec::new();
         let mut err_p_types = Vec::new();
 
-        for parser in parsers.iter() {
-            match parser(ctx.clone()) {
+        for parser in self.parsers.iter() {
+            match parser.parse_from_context(ctx.clone()) {
                 Ok(res) => return Ok(res),
                 Err(mut err) => {
                     if err.p_type_stack.contains(&ParserType::Surely) {
@@ -53,7 +53,7 @@ pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
                         return Err(err);
                     } else {
                         err_exps.push(err.exp);
-                        err_p_types.push(err.p_type_stack.last().unwrap().clone());
+                        err_p_types.push(parser.get_parser_type());
                     }
                 }
             }
@@ -61,10 +61,8 @@ pub fn any<T: 'static>(parsers: Vec<Parser<T>>) -> Parser<T> {
 
         err_p_types.reverse();
         err_p_types.push(ParserType::Any);
-        return Err(Failure::new(
-            format!("{{ `{}` }}", err_exps.join("` | `")),
-            ctx,
-            err_p_types,
-        ));
-    })
+        return Err(Failure::new(self.generic_error.clone(), ctx, err_p_types));
+    }
 }
+
+impl<T> StringParserT<T> for AnyParser<T> {}

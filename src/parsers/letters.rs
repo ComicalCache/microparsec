@@ -1,26 +1,40 @@
-use crate::{Context, Parser, ParserType};
+use crate::{Context, ContextParserT, Failure, ParserType, RegexParser, StringParserT, Success};
 
-use super::regex;
-
-/// # Letters parser
 /// Parses for at least one letter
-/// # Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{letters, parse};
+/// use parse_me::{LettersParser, StringParserT, ContextParserT};
 ///
-/// let res = parse("Hello", letters());
+/// let res = LettersParser::new().parse("Hello");
 /// assert_eq!(res.unwrap().val, "Hello");
 /// ```
-pub fn letters() -> Parser<String> {
-    Box::new(
-        move |ctx: Context| match regex("[a-zA-Z]+", "letters")(ctx) {
+#[derive(Clone)]
+pub struct LettersParser {}
+
+impl LettersParser {
+    pub fn new() -> Self {
+        LettersParser {}
+    }
+}
+
+impl ContextParserT<String> for LettersParser {
+    fn get_generic_error_message(&self) -> String {
+        "letters".to_string()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::Letters
+    }
+
+    fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
+        match RegexParser::new("[a-zA-Z]+", "letters").parse_from_context(ctx) {
             Ok(res) => Ok(res),
             Err(mut err) => {
                 err.p_type_stack.push(ParserType::Letters);
                 Err(err)
             }
-        },
-    )
+        }
+    }
 }
+
+impl StringParserT<String> for LettersParser {}

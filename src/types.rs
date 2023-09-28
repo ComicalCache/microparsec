@@ -1,7 +1,41 @@
 use std::fmt::Display;
 
-/// Internal parser type
-pub type Parser<T> = Box<dyn Fn(Context) -> Result<Success<T>, Failure>>;
+#[cfg(not(feature = "thread-safe"))]
+use std::rc::Rc;
+#[cfg(feature = "thread-safe")]
+use std::sync::Arc;
+
+#[cfg(not(feature = "thread-safe"))]
+pub type ParserRc<T> = Rc<T>;
+
+#[cfg(feature = "thread-safe")]
+pub type ParserRc<T> = Arc<T>;
+
+/// Trait for parsers that can take in a `Context` and act on it. <br>
+/// Parsers are understood to be *pure with static state after initialization*. This is important because
+/// `AnyParser`, `SequenceParser` and likewise parsers store parsers internally as
+/// `ParserRc<dyn ContextParserT<T>>` and thus only make a shallow copy. Parsers that are *not* pure
+/// might and likely will cause unexpected behaviour.
+pub trait ContextParserT<T> {
+    /// Returns a generic error message of the parser that is configured at initialization and
+    /// independent of the runtime result of the attempted parse
+    fn get_generic_error_message(&self) -> String;
+
+    /// Returns the `ParserType` of the parser (used for stack traces and error messages)
+    fn get_parser_type(&self) -> ParserType;
+
+    /// Consumes a `Context` and attempts to parse it
+    fn parse_from_context(&self, ctx: Context) -> Result<Success<T>, Failure>;
+}
+
+/// This is a sub-trait of `ContextParserT<T>`. It's only function is to abstract away the creation
+/// of an initial `Context` for parsing and acts as "syntax sugar".
+pub trait StringParserT<T>: ContextParserT<T> {
+    /// Consumes a string type and attempts to parse it
+    fn parse<S: AsRef<str>>(&self, txt: S) -> Result<Success<T>, Failure> {
+        self.parse_from_context(Context::from(txt))
+    }
+}
 
 /// Parser context
 /// * `txt` - input string
@@ -58,6 +92,7 @@ impl<T> Success<T> {
 /// `Failure` is a failed parse result
 /// * `exp` holds the error message
 /// * `ctx` holds the context of the parse
+/// * `p_type_stack` holds a call stack of parsers that lead up to the failure
 #[derive(Debug, Clone)]
 pub struct Failure {
     /// Error message
@@ -73,25 +108,13 @@ impl Failure {
     /// Creates a new `Failure` object with a short error message and context
     /// * `ctx` - the parse context
     /// * `exp` - a string of what was expected
-    /// * `p_type` - the type of parser that caused the failure
+    /// * `p_type_stack` - the parser stack that caused the failure
     pub fn new<S: AsRef<str>>(exp: S, ctx: Context, p_type_stack: Vec<ParserType>) -> Failure {
         let exp = exp.as_ref().to_string();
         Failure {
             exp,
             ctx,
             p_type_stack,
-        }
-    }
-
-    /// Creates a new `Failure` object with a short error message and context
-    /// * `ctx` - the parse context
-    /// * `exp` - a string of what was expected
-    pub fn from<S: AsRef<str>>(exp: S, ctx: Context) -> Failure {
-        let exp = exp.as_ref().to_string();
-        Failure {
-            exp,
-            ctx,
-            p_type_stack: Vec::new(),
         }
     }
 
@@ -121,6 +144,7 @@ impl Failure {
 }
 
 /// Enum used to determine the *relative* position to parse to in the `exact` parser
+#[derive(Clone, Copy)]
 pub enum Pos {
     /// Parse `x` characters
     Chars(usize),
@@ -132,6 +156,7 @@ pub enum Pos {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserType {
     Any,
+    AnythingBetween,
     Between,
     Either,
     Exact,
@@ -157,6 +182,7 @@ impl Display for ParserType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
             ParserType::Any => "any",
+            ParserType::AnythingBetween => "anything_between",
             ParserType::Between => "between",
             ParserType::Either => "either",
             ParserType::Exact => "exact",

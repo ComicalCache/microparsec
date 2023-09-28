@@ -1,35 +1,53 @@
 use regex::Regex;
 
-use crate::{string_utils::StringUtils, Context, Failure, Parser, ParserType, Success};
+use crate::{string_utils::StringUtils, Context, Failure, ParserType, Success, ContextParserT, StringParserT};
 
-/// # Regex parser
 /// Parses for a given regex pattern
-/// ### Arguments
-/// * `target` - The target regex pattern
-/// * `expected` - A custom error message
-/// ### Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{regex, parse};
+/// use parse_me::{RegexParser, ContextParserT, StringParserT};
 ///
-/// let res = parse("+12 345 67890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
+/// let number_parser = RegexParser::new(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number");
+/// let res = number_parser.parse("+12 345 67890");
 /// assert_eq!(res.unwrap().val, "+12 345 67890");
 ///
-/// let res = parse("+12 45 6890", regex(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number"));
+/// let res = number_parser.parse("+12 45 6890");
 /// assert_eq!(
 ///     res.unwrap_err().get_error_message(),
 ///     "[Parser error] Expected `Phone number` at position: 0"
 /// );
 /// ```
-pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser<String> {
-    let target = target.as_ref().to_string();
-    let expected = expected.as_ref().to_string();
+#[derive(Clone)]
+pub struct RegexParser {
+    regex: String,
+    generic_error: String,
+}
 
-    Box::new(move |mut ctx: Context| {
-        let regex = match Regex::new(&target) {
+impl RegexParser {
+    pub fn new<A: AsRef<str>, B: AsRef<str>>(regex: A, expected: B) -> Self {
+        let regex = regex.as_ref().to_string();
+        let generic_error = expected.as_ref().to_string();
+
+        RegexParser {
+            regex,
+            generic_error,
+        }
+    }
+}
+
+impl ContextParserT<String> for RegexParser {
+    fn get_generic_error_message(&self) -> String {
+        self.generic_error.clone()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::Regex
+    }
+
+    fn parse_from_context(&self, mut ctx: Context) -> Result<Success<String>, Failure> {
+        let regex = match Regex::new(&self.regex) {
             Ok(regex) => regex,
-            Err(_) => panic!("Invalid regex: {}", target),
+            Err(_) => panic!("Invalid regex: {}", self.regex),
         };
 
         let sliced_ctx = ctx.txt.slice(ctx.pos..);
@@ -42,9 +60,11 @@ pub fn regex<A: AsRef<str>, B: AsRef<str>>(target: A, expected: B) -> Parser<Str
         }
 
         return Err(Failure::new(
-            format!("{}", expected.clone()),
+            format!("{}", self.generic_error.clone()),
             ctx,
             vec![ParserType::Regex],
         ));
-    })
+    }
 }
+
+impl StringParserT<String> for RegexParser {}

@@ -1,31 +1,49 @@
-use crate::{string_utils::StringUtils, Context, Failure, Parser, ParserType, Success};
+use crate::{string_utils::StringUtils, Context, Failure, ParserType, Success, ContextParserT, StringParserT};
 
-/// # String parser
-/// Parses for a given target string
-/// ### Arguments
-/// * `target` - The target string to parse for
-/// ### Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
-/// ## Example
+/// Parses for a specific target string
+/// ### Example
 /// ```
-/// use parse_me::{string, parse};
+/// use parse_me::{StringParser, ContextParserT, StringParserT};
 ///
-/// let res = parse("Hello World", string("Hello World"));
+/// let res = StringParser::new("Hello World").parse("Hello World");
 /// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn string<S: AsRef<str>>(target: S) -> Parser<String> {
-    let target = target.as_ref().to_string();
+#[derive(Clone)]
+pub struct StringParser {
+    target: String,
+}
 
-    Box::new(move |mut ctx: Context| {
-        if ctx.txt.slice(ctx.pos..).starts_with(&target) {
-            ctx.pos += target.len();
-            return Ok(Success::new(target.clone(), ctx));
+impl StringParser {
+    /// Creates a new `StringParser` with the specified target string
+    pub fn new<S: AsRef<str>>(target: S) -> Self {
+        let target = target.as_ref().to_string();
+        StringParser {
+            target
+        }
+    }
+}
+
+impl ContextParserT<String> for StringParser {
+    fn get_generic_error_message(&self) -> String {
+        self.target.clone()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::String
+    }
+
+    fn parse_from_context(&self, mut ctx: Context) -> Result<Success<String>, Failure> {
+        if ctx.txt.slice(ctx.pos..).starts_with(&self.target) {
+            ctx.pos += self.target.len();
+            return Ok(Success::new(self.target.clone(), ctx));
         }
 
         return Err(Failure::new(
-            format!("{}", target.clone()),
+            format!("{}", self.target.clone()),
             ctx,
             vec![ParserType::String],
         ));
-    })
+    }
 }
+
+impl StringParserT<String> for StringParser {}

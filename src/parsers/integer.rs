@@ -1,24 +1,40 @@
-use crate::{Context, Parser, ParserType};
+use crate::{Context, ContextParserT, Failure, ParserType, RegexParser, StringParserT, Success};
 
-use super::regex;
-
-/// # Integer parser
 /// Parses for an integer
-/// # Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
 /// ## Example
 /// ```
-/// use parse_me::{integer, parse};
+/// use parse_me::{IntegerParser, ContextParserT, StringParserT};
 ///
-/// let res = parse("123", integer());
+/// let res = IntegerParser::new().parse("123");
 /// assert_eq!(res.unwrap().val, "123");
 /// ```
-pub fn integer() -> Parser<String> {
-    Box::new(move |ctx: Context| match regex(r"\d+", "integer")(ctx) {
-        Ok(res) => Ok(res),
-        Err(mut err) => {
-            err.p_type_stack.push(ParserType::Integer);
-            Err(err)
-        }
-    })
+#[derive(Clone)]
+pub struct IntegerParser {}
+
+impl IntegerParser {
+    pub fn new() -> Self {
+        IntegerParser {}
+    }
 }
+
+impl ContextParserT<String> for IntegerParser {
+    fn get_generic_error_message(&self) -> String {
+        "integer".to_string()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::Integer
+    }
+
+    fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
+        match RegexParser::new(r"\d+", "integer").parse_from_context(ctx) {
+            Ok(res) => Ok(res),
+            Err(mut err) => {
+                err.p_type_stack.push(ParserType::Integer);
+                Err(err)
+            }
+        }
+    }
+}
+
+impl StringParserT<String> for IntegerParser {}

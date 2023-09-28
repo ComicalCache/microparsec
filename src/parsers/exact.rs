@@ -1,22 +1,44 @@
-use crate::{Context, Failure, Parser, ParserType, Pos};
+use crate::{ParserRc, Context, ContextParserT, Failure, ParserType, Pos, StringParserT, Success};
 
-/// # Exact parser
-/// Attemts to parse a specified number of chars or to the EOI and fails otherwise
-/// ### Arguments
-/// * `parser` - The parser to parse with
-/// ### Returns
-/// * A parser that can be used in other parsers or directly ran in the `parse(...)` function
+/// Attempts to parse a specified number of chars or to the EOI and fails otherwise
 /// ## Example
 /// ```
-/// use parse_me::{exact, string, parse, Pos};
+/// use parse_me::{ParserRc, ExactParser, StringParser, Pos, ContextParserT, StringParserT};
 ///
-/// let res = parse("Hello World", exact(string("Hello World"), Pos::EOI));
+/// let hello_world_parser = StringParser::new("Hello World");
+/// let res = ExactParser::new(ParserRc::new(hello_world_parser), Pos::EOI).parse("Hello World");
 /// assert_eq!(res.unwrap().val, "Hello World");
 /// ```
-pub fn exact<T: 'static>(parser: Parser<T>, pos: Pos) -> Parser<T> {
-    Box::new(move |ctx: Context| {
+#[derive(Clone)]
+pub struct ExactParser<T> {
+    parser: ParserRc<dyn ContextParserT<T>>,
+    pos: Pos,
+    generic_error: String,
+}
+
+impl<T> ExactParser<T> {
+    pub fn new(parser: ParserRc<dyn ContextParserT<T>>, pos: Pos) -> Self {
+        let generic_error = format!("exactly `{}`", parser.clone().get_generic_error_message());
+        ExactParser {
+            parser,
+            pos,
+            generic_error,
+        }
+    }
+}
+
+impl<T> ContextParserT<T> for ExactParser<T> {
+    fn get_generic_error_message(&self) -> String {
+        self.generic_error.clone()
+    }
+
+    fn get_parser_type(&self) -> ParserType {
+        ParserType::Exact
+    }
+
+    fn parse_from_context(&self, ctx: Context) -> Result<Success<T>, Failure> {
         let prev_pos = ctx.pos;
-        let mut res = match parser(ctx) {
+        let mut res = match self.parser.parse_from_context(ctx) {
             Ok(res) => res,
             Err(mut err) => {
                 err.p_type_stack.push(ParserType::Exact);
@@ -24,7 +46,7 @@ pub fn exact<T: 'static>(parser: Parser<T>, pos: Pos) -> Parser<T> {
             }
         };
 
-        match pos {
+        match self.pos {
             Pos::Chars(x) => {
                 if res.ctx.pos - prev_pos == x {
                     Ok(res)
@@ -50,5 +72,7 @@ pub fn exact<T: 'static>(parser: Parser<T>, pos: Pos) -> Parser<T> {
                 }
             }
         }
-    })
+    }
 }
+
+impl<T> StringParserT<T> for ExactParser<T> {}
