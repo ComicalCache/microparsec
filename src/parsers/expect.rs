@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// Runs a supplied parser, if fails, returns a custom error message
 /// ## Example
 /// ```
-/// use parse_me::{ParserRc, ExpectParser, StringParser, ContextParserT, StringParserT};
+/// use microparsec::{ParserRc, ExpectParser, StringParser, ContextParserT, StringParserT};
 ///
 /// let hello_world_parser = StringParser::new("Hello World");
 /// let res = ExpectParser::new(ParserRc::new(hello_world_parser), "\"Hello World\"").parse("Hallo Welt");

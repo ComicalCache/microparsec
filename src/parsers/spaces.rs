@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 /// Parses for at least one and as many spaces as possible
 /// ## Example
 /// ```
-/// use parse_me::{ParserRc, SpacesParser, StringParser, SequenceParser, StringParserT, ContextParserT, parsers};
+/// use microparsec::{ParserRc, SpacesParser, StringParser, SequenceParser, StringParserT, ContextParserT, parsers};
 ///
 /// let hello_parser = StringParser::new("Hello");
 /// let spaces_parser = SpacesParser::new();
@@ -19,6 +19,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 pub struct SpacesParser {}
 
 impl SpacesParser {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         SpacesParser {}
     }

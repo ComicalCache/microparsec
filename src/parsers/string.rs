@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 /// Parses for a specific target string
 /// ### Example
 /// ```
-/// use parse_me::{StringParser, ContextParserT, StringParserT};
+/// use microparsec::{StringParser, ContextParserT, StringParserT};
 ///
 /// let res = StringParser::new("Hello World").parse("Hello World");
 /// assert_eq!(res.unwrap().val, "Hello World");
@@ -37,11 +37,11 @@ impl ContextParserT<String> for StringParser {
             return Ok(Success::new(self.target.clone(), ctx));
         }
 
-        return Err(Failure::new(
+        Err(Failure::new(
             self.target.clone(),
             ctx,
             vec![ParserType::String],
-        ));
+        ))
     }
 }
 

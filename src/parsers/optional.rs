@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// Tries to parse the given parser, but if it fails, it returns a successful result with a None value
 /// ## Example
 /// ```
-/// use parse_me::{StringParser, OptionalParser, ContextParserT, StringParserT, ParserRc};
+/// use microparsec::{StringParser, OptionalParser, ContextParserT, StringParserT, ParserRc};
 ///
 /// let hello_world_parser = StringParser::new("Hello World");
 /// let res = OptionalParser::new(ParserRc::new(hello_world_parser.clone())).parse("Hello World");

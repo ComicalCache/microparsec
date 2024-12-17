@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// "Forgets" the success value type and changes it to `()`
 /// ## Example
 /// ```
-/// use parse_me::{StringParser, ForgetParser, ParserRc, ContextParserT, StringParserT};
+/// use microparsec::{StringParser, ForgetParser, ParserRc, ContextParserT, StringParserT};
 ///
 /// let res = ForgetParser::new(ParserRc::new(StringParser::new("Hello"))).parse("Hello");
 /// assert_eq!(res.unwrap().val, ());

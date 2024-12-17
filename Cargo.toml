@@ -1,11 +1,11 @@
 [package]
-name = "parse_me"
-version = "0.6.1"
+name = "microparsec"
+version = "0.1.0"
 edition = "2021"
 
 license = "MIT"
-description = "Parser combinator crate. Provides a simple parser combinator crate for Rust."
-repository = "https://github.com/SuspiciousScorpion/parser-combinator"
+description = "A simple parser combinator crate for Rust."
+repository = "https://github.com/ComicalCache/parser-combinator"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -1,11 +1,11 @@
-use crate::{ParserRc, Context, ContextParserT, Failure, ParserType, StringParserT, Success};
+use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParserT, Success};
 
 /// # Between parser
 /// Parses between two parsers, both the front and the back parser must succeed as well as the
 /// middle parser, only then it is considered a successful parse.
 /// ## Example
 /// ```
-/// use parse_me::{ParserRc, BetweenParser, StringParser, ContextParserT, StringParserT};
+/// use microparsec::{ParserRc, BetweenParser, StringParser, ContextParserT, StringParserT};
 ///
 /// let quote_parser = StringParser::new("\"");
 /// let hello_parser = ParserRc::new(StringParser::new("Hello"));
@@ -22,13 +22,16 @@ pub struct BetweenParser<N, T, M> {
 }
 
 impl<N, T, M> BetweenParser<N, T, M> {
-    pub fn new(front_parser: ParserRc<dyn ContextParserT<N>>,
-               middle_parser: ParserRc<dyn ContextParserT<T>>,
-               back_parser: ParserRc<dyn ContextParserT<M>>) -> Self {
-        let generic_error = format!("{} + {} + {}",
-                                    front_parser.get_generic_error_message(),
-                                    middle_parser.get_generic_error_message(),
-                                    back_parser.get_generic_error_message()
+    pub fn new(
+        front_parser: ParserRc<dyn ContextParserT<N>>,
+        middle_parser: ParserRc<dyn ContextParserT<T>>,
+        back_parser: ParserRc<dyn ContextParserT<M>>,
+    ) -> Self {
+        let generic_error = format!(
+            "{} + {} + {}",
+            front_parser.get_generic_error_message(),
+            middle_parser.get_generic_error_message(),
+            back_parser.get_generic_error_message()
         );
 
         BetweenParser {

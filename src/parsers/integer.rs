@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 /// Parses for an integer
 /// ## Example
 /// ```
-/// use parse_me::{IntegerParser, ContextParserT, StringParserT};
+/// use microparsec::{IntegerParser, ContextParserT, StringParserT};
 ///
 /// let res = IntegerParser::new().parse("123");
 /// assert_eq!(res.unwrap().val, "123");
@@ -12,6 +12,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 pub struct IntegerParser {}
 
 impl IntegerParser {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         IntegerParser {}
     }

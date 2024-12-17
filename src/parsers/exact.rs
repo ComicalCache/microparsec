@@ -1,9 +1,9 @@
-use crate::{ParserRc, Context, ContextParserT, Failure, ParserType, Pos, StringParserT, Success};
+use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, Pos, StringParserT, Success};
 
 /// Attempts to parse a specified number of chars or to the EOI and fails otherwise
 /// ## Example
 /// ```
-/// use parse_me::{ParserRc, ExactParser, StringParser, Pos, ContextParserT, StringParserT};
+/// use microparsec::{ParserRc, ExactParser, StringParser, Pos, ContextParserT, StringParserT};
 ///
 /// let hello_world_parser = StringParser::new("Hello World");
 /// let res = ExactParser::new(ParserRc::new(hello_world_parser), Pos::EOI).parse("Hello World");

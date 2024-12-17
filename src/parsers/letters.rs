@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 /// Parses for at least one letter
 /// ## Example
 /// ```
-/// use parse_me::{LettersParser, StringParserT, ContextParserT};
+/// use microparsec::{LettersParser, StringParserT, ContextParserT};
 ///
 /// let res = LettersParser::new().parse("Hello");
 /// assert_eq!(res.unwrap().val, "Hello");
@@ -12,6 +12,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 pub struct LettersParser {}
 
 impl LettersParser {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         LettersParser {}
     }

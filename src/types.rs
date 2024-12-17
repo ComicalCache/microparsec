@@ -11,6 +11,7 @@ pub type ParserRc<T> = Rc<T>;
 #[cfg(feature = "thread-safe")]
 pub type ParserRc<T> = Arc<T>;
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// Trait for parsers that can take in a `Context` and act on it. <br>
 /// Parsers are understood to be *pure with static state after initialization*. This is important because
 /// `AnyParser`, `SequenceParser` and likewise parsers store parsers internally as

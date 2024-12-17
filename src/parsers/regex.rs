@@ -5,7 +5,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success
 /// Parses for a given regex pattern
 /// ## Example
 /// ```
-/// use parse_me::{RegexParser, ContextParserT, StringParserT};
+/// use microparsec::{RegexParser, ContextParserT, StringParserT};
 ///
 /// let number_parser = RegexParser::new(r"\+\d{2}\s\d{3}\s\d{5}", "Phone number");
 /// let res = number_parser.parse("+12 345 67890");
@@ -51,7 +51,7 @@ impl ContextParserT<String> for RegexParser {
         };
 
         let sliced_ctx = &ctx.txt[ctx.pos..];
-        let mat = regex.find(&sliced_ctx);
+        let mat = regex.find(sliced_ctx);
         if let Some(mat) = mat {
             if mat.start() == 0 {
                 ctx.pos += mat.end();
@@ -59,11 +59,11 @@ impl ContextParserT<String> for RegexParser {
             }
         }
 
-        return Err(Failure::new(
-            format!("{}", self.generic_error.clone()),
+        Err(Failure::new(
+            &self.generic_error,
             ctx,
             vec![ParserType::Regex],
-        ));
+        ))
     }
 }
 

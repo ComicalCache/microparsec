@@ -4,7 +4,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// or an error if no parser matched.
 /// ### Example
 /// ```
-/// use parse_me::{ParserRc, AnyParser, StringParser, ContextParserT, StringParserT, parsers};
+/// use microparsec::{ParserRc, AnyParser, StringParser, ContextParserT, StringParserT, parsers};
 ///
 /// let hello_parser = StringParser::new("Hello");
 /// let hallo_parser = StringParser::new("Hallo");
@@ -57,11 +57,11 @@ impl<T> ContextParserT<T> for AnyParser<T> {
             }
         }
 
-        return Err(Failure::new(
+        Err(Failure::new(
             self.generic_error.clone(),
             ctx,
             vec![ParserType::Any],
-        ));
+        ))
     }
 }
 

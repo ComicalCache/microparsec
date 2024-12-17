@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/parse_me.iml" filepath="$PROJECT_DIR$/.idea/parse_me.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/microparsec.iml" filepath="$PROJECT_DIR$/.idea/microparsec.iml" />
     </modules>
   </component>
 </project>

@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// Parses for a sequence of parsers
 /// ## Example
 /// ```
-/// use parse_me::{ParserRc, SpacesParser, StringParser, SequenceParser, StringParserT, ContextParserT, parsers};
+/// use microparsec::{ParserRc, SpacesParser, StringParser, SequenceParser, StringParserT, ContextParserT, parsers};
 ///
 /// let hello_parser = StringParser::new("Hello");
 /// let spaces_parser = SpacesParser::new();
@@ -23,7 +23,8 @@ pub struct SequenceParser<T> {
 
 impl<T> SequenceParser<T> {
     pub fn new(parsers: Vec<ParserRc<dyn ContextParserT<T>>>) -> Self {
-        let generic_error = parsers.iter()
+        let generic_error = parsers
+            .iter()
             .map(|p| p.get_generic_error_message())
             .collect::<Vec<String>>()
             .join(" -> ");
@@ -59,7 +60,7 @@ impl<T> ContextParserT<Vec<T>> for SequenceParser<T> {
             };
         }
 
-        return Ok(Success::new(result, ctx));
+        Ok(Success::new(result, ctx))
     }
 }
 

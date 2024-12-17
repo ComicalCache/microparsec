@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// If an any parser comes across a surely parser and it fails the any parser immediately fails as well
 /// ## Example
 /// ```
-/// use parse_me::{SequenceParser, SurelyParser, AnyParser, StringParser, ParserRc, ContextParserT, StringParserT, parsers};
+/// use microparsec::{SequenceParser, SurelyParser, AnyParser, StringParser, ParserRc, ContextParserT, StringParserT, parsers};
 ///
 /// // let res = parse("Hello Welt", any!(sequence!(string("Hello"), spaces(), surely(string("World"))), sequence!(string("Hallo"), spaces(), surely(string("Welt")))));
 /// let hello_parser = StringParser::new("Hello");

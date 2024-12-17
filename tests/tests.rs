@@ -1,4 +1,4 @@
-use parse_me::*;
+use microparsec::*;
 
 fn __test_get_error_message(err: &str, pos: usize) -> String {
     Failure::new(err, Context::new("", pos), vec![]).get_error_message()

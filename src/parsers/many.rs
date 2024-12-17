@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// Parses as many times as possible, returns an error if no parsing was successful
 /// ## Example
 /// ```
-/// use parse_me::{ManyParser, ContextParserT, StringParserT, ParserRc, RegexParser};
+/// use microparsec::{ManyParser, ContextParserT, StringParserT, ParserRc, RegexParser};
 ///
 /// let digit_parser = RegexParser::new(r"\d", "digit");
 /// let digits_parser = ManyParser::new(ParserRc::new(digit_parser));

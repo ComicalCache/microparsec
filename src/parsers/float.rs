@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, RegexParser, StringPar
 /// Parses for a float
 /// ## Example
 /// ```
-/// use parse_me::{FloatParser, ContextParserT, StringParserT};
+/// use microparsec::{FloatParser, ContextParserT, StringParserT};
 ///
 /// let res = FloatParser::new().parse("123.456");
 /// assert_eq!(res.unwrap().val, "123.456");
@@ -12,6 +12,7 @@ use crate::{Context, ContextParserT, Failure, ParserType, RegexParser, StringPar
 pub struct FloatParser {}
 
 impl FloatParser {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         FloatParser {}
     }

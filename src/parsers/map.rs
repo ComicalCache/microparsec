@@ -3,7 +3,7 @@ use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParser
 /// Maps the result of a parser to a new value
 /// ## Example
 /// ```
-/// use parse_me::{MapParser, IntegerParser, SequenceParser, StringParser, ParserRc, ContextParserT, StringParserT, parsers};
+/// use microparsec::{MapParser, IntegerParser, SequenceParser, StringParser, ParserRc, ContextParserT, StringParserT, parsers};
 ///
 /// let hello_parser = StringParser::new("Hello");
 /// let space_parser = StringParser::new(" ");
@@ -27,8 +27,10 @@ pub struct MapParser<T, M> {
 }
 
 impl<T, M> MapParser<T, M> {
-    pub fn new(parser: ParserRc<dyn ContextParserT<T>>,
-               mapper: fn(Success<T>) -> Result<M, String>) -> Self {
+    pub fn new(
+        parser: ParserRc<dyn ContextParserT<T>>,
+        mapper: fn(Success<T>) -> Result<M, String>,
+    ) -> Self {
         let generic_error = format!("mapping `{}`", parser.get_generic_error_message());
 
         MapParser {
