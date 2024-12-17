@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::{string_utils::StringUtils, Context, Failure, ParserType, Success, ContextParserT, StringParserT};
+use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success};
 
 /// Parses for a given regex pattern
 /// ## Example
@@ -50,7 +50,7 @@ impl ContextParserT<String> for RegexParser {
             Err(_) => panic!("Invalid regex: {}", self.regex),
         };
 
-        let sliced_ctx = ctx.txt.slice(ctx.pos..);
+        let sliced_ctx = &ctx.txt[ctx.pos..];
         let mat = regex.find(&sliced_ctx);
         if let Some(mat) = mat {
             if mat.start() == 0 {

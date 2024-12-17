@@ -27,12 +27,9 @@ impl ContextParserT<String> for FloatParser {
     }
 
     fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
-        match RegexParser::new(r"\d+\.\d*", "float").parse_from_context(ctx) {
+        match RegexParser::new(r"\d+\.\d*", "float").parse_from_context(ctx.clone()) {
             Ok(res) => Ok(res),
-            Err(mut err) => {
-                err.p_type_stack.push(ParserType::Float);
-                Err(err)
-            }
+            Err(err) => Err(Failure::new("float", err.ctx, vec![ParserType::Float])),
         }
     }
 }

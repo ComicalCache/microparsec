@@ -1,4 +1,4 @@
-use crate::{Context, ContextParserT, Failure, ParserType, RegexParser, StringParserT, Success};
+use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success};
 
 /// Parses for at least one letter
 /// ## Example
@@ -26,14 +26,18 @@ impl ContextParserT<String> for LettersParser {
         ParserType::Letters
     }
 
-    fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
-        match RegexParser::new("[a-zA-Z]+", "letters").parse_from_context(ctx) {
-            Ok(res) => Ok(res),
-            Err(mut err) => {
-                err.p_type_stack.push(ParserType::Letters);
-                Err(err)
-            }
+    fn parse_from_context(&self, mut ctx: Context) -> Result<Success<String>, Failure> {
+        let letters: String = ctx.txt[ctx.pos..]
+            .chars()
+            .take_while(|c| c.is_alphabetic())
+            .collect();
+
+        if letters.is_empty() {
+            return Err(Failure::new("letters", ctx, vec![ParserType::Letters]));
         }
+
+        ctx.pos += letters.len();
+        Ok(Success::new(letters, ctx))
     }
 }
 

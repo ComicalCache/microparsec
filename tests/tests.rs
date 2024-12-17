@@ -11,7 +11,10 @@ fn string_test() {
     assert_eq!(res.unwrap().ctx.pos, 1);
 
     let res = StringParser::new("に").parse("Hello World");
-    assert_eq!(res.unwrap_err().get_error_message(), __test_get_error_message("に", 0));
+    assert_eq!(
+        res.unwrap_err().get_error_message(),
+        __test_get_error_message("に", 0)
+    );
 
     let res = StringParser::new("Hello World").parse("Hello World");
     assert_eq!(res.clone().unwrap().val, "Hello World");
@@ -58,7 +61,6 @@ fn optional_test() {
     let res = parser.parse("Hello World");
     assert_eq!(res.clone().unwrap().val.unwrap(), "Hello World".to_string());
     assert_eq!(res.unwrap().ctx.pos, 11);
-
 
     let res = parser.parse("Hallo Welt");
     assert_eq!(res.unwrap().val.is_none(), true);
@@ -111,12 +113,11 @@ fn any_test() {
     let hola = StringParser::new("Hola");
     let s_world = StringParser::new(" World");
 
-    let parser1 = SequenceParser::new(
-        parsers!(AnyParser::new(parsers!(hallo.clone(), hello)), s_world.clone())
-    );
-    let parser2 = SequenceParser::new(
-        parsers!(AnyParser::new(parsers!(hallo, hola)), s_world)
-    );
+    let parser1 = SequenceParser::new(parsers!(
+        AnyParser::new(parsers!(hallo.clone(), hello)),
+        s_world.clone()
+    ));
+    let parser2 = SequenceParser::new(parsers!(AnyParser::new(parsers!(hallo, hola)), s_world));
 
     let res = parser1.parse("Hello World");
     assert_eq!(
@@ -140,17 +141,14 @@ fn map_test() {
 
     let parser = SequenceParser::new(parsers!(hello, space, world));
 
-    let res = MapParser::new(
-        ParserRc::new(parser.clone()),
-        |res| Ok(res.val.join("")))
+    let res = MapParser::new(ParserRc::new(parser.clone()), |res| Ok(res.val.join("")))
         .parse("Hello World");
     assert_eq!(res.clone().unwrap().val, "Hello World".to_string());
     assert_eq!(res.unwrap().ctx.pos, 11);
 
-    let res: Result<Success<()>, Failure> = MapParser::new(
-        ParserRc::new(parser),
-        |_| Err("mapping()".to_string()))
-        .parse("Hello World");
+    let res: Result<Success<()>, Failure> =
+        MapParser::new(ParserRc::new(parser), |_| Err("mapping()".to_string()))
+            .parse("Hello World");
     assert_eq!(
         res.unwrap_err().get_error_message(),
         __test_get_error_message("mapping()", 11)
@@ -192,15 +190,8 @@ fn between_test() {
     let quote = ParserRc::new(StringParser::new("\""));
     let hello = ParserRc::new(StringParser::new("Hello"));
 
-    let parser1 = BetweenParser::new(
-        quote.clone(),
-        hello.clone(),
-        quote.clone());
-    let parser2 = BetweenParser::new(
-        ParserRc::new(IntegerParser::new()),
-        hello,
-        quote);
-
+    let parser1 = BetweenParser::new(quote.clone(), hello.clone(), quote.clone());
+    let parser2 = BetweenParser::new(ParserRc::new(IntegerParser::new()), hello, quote);
 
     let res = parser1.parse("\"Hello\"");
     assert_eq!(res.clone().unwrap().val, "Hello");
@@ -352,10 +343,25 @@ fn surely_test() {
     let welt = StringParser::new("Welt");
     let spaces = SpacesParser::new();
 
-    let parser1 = AnyParser::new(parsers!(hallo.clone(), SurelyParser::new(ParserRc::new(hello.clone()))));
-    let parser2 = AnyParser::new(parsers!(hallo.clone(), SurelyParser::new(ParserRc::new(hola)), hello.clone()));
-    let p31 = SequenceParser::new(parsers!(hello, spaces.clone(), SurelyParser::new(ParserRc::new(world))));
-    let p32 = SequenceParser::new(parsers!(hallo, spaces, SurelyParser::new(ParserRc::new(welt))));
+    let parser1 = AnyParser::new(parsers!(
+        hallo.clone(),
+        SurelyParser::new(ParserRc::new(hello.clone()))
+    ));
+    let parser2 = AnyParser::new(parsers!(
+        hallo.clone(),
+        SurelyParser::new(ParserRc::new(hola)),
+        hello.clone()
+    ));
+    let p31 = SequenceParser::new(parsers!(
+        hello,
+        spaces.clone(),
+        SurelyParser::new(ParserRc::new(world))
+    ));
+    let p32 = SequenceParser::new(parsers!(
+        hallo,
+        spaces,
+        SurelyParser::new(ParserRc::new(welt))
+    ));
     let parser3 = AnyParser::new(parsers!(p31, p32));
 
     let res = parser1.parse("Hello World");
@@ -386,8 +392,16 @@ fn p_type_stack_test() {
     let integer = IntegerParser::new();
 
     let parser1 = SequenceParser::new(parsers!(hello.clone(), spaces.clone(), welt.clone()));
-    let p21 = SequenceParser::new(parsers!(hello, spaces.clone(), SurelyParser::new(ParserRc::new(world))));
-    let p22 = SequenceParser::new(parsers!(hallo.clone(), spaces, SurelyParser::new(ParserRc::new(welt))));
+    let p21 = SequenceParser::new(parsers!(
+        hello,
+        spaces.clone(),
+        SurelyParser::new(ParserRc::new(world))
+    ));
+    let p22 = SequenceParser::new(parsers!(
+        hallo.clone(),
+        spaces,
+        SurelyParser::new(ParserRc::new(welt))
+    ));
     let parser2 = AnyParser::new(parsers!(p21, p22));
     let parser3 = AnyParser::new(parsers!(hi, hallo, integer));
 
@@ -419,15 +433,10 @@ fn p_type_stack_test() {
     let res = parser3.parse("Hello");
     assert_eq!(
         res.clone().unwrap_err().p_type_stack,
-        vec![
-            ParserType::Integer,
-            ParserType::String,
-            ParserType::String,
-            ParserType::Any,
-        ]
+        vec![ParserType::Any,]
     );
     assert_eq!(
         res.unwrap_err().get_error_message_stack_trace(),
-        "[Parser error] Expected `{ `Hi` | `Hallo` | `integer` }` at position: 0\n\nCall Stack:\n4. `integer` parser\n3. `string` parser\n2. `string` parser\n1. `any` parser"
+        "[Parser error] Expected `{ `Hi` | `Hallo` | `integer` }` at position: 0\n\nCall Stack:\n1. `any` parser"
     );
 }

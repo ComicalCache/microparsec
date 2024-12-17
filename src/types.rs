@@ -43,7 +43,7 @@ pub trait StringParserT<T>: ContextParserT<T> {
 #[derive(Debug, Clone)]
 pub struct Context {
     /// Current input string
-    pub txt: String,
+    pub txt: ParserRc<str>,
     /// Current position in input string
     pub pos: usize,
 }
@@ -54,7 +54,7 @@ impl Context {
     /// * `pos` - The position in the context
     pub fn new<S: AsRef<str>>(txt: S, pos: usize) -> Self {
         Context {
-            txt: txt.as_ref().to_string(),
+            txt: txt.as_ref().into(),
             pos,
         }
     }
@@ -63,7 +63,7 @@ impl Context {
     /// * `txt` - The text of the context
     pub fn from<S: AsRef<str>>(txt: S) -> Self {
         Context {
-            txt: txt.as_ref().to_string(),
+            txt: txt.as_ref().into(),
             pos: 0,
         }
     }

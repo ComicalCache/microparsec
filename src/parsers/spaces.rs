@@ -1,4 +1,4 @@
-use crate::{Context, ParserType, ContextParserT, StringParserT, Success, Failure, RegexParser};
+use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success};
 
 /// Parses for at least one and as many spaces as possible
 /// ## Example
@@ -33,14 +33,18 @@ impl ContextParserT<String> for SpacesParser {
         ParserType::Spaces
     }
 
-    fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
-        match RegexParser::new("[ ]+", "spaces").parse_from_context(ctx) {
-            Ok(res) => Ok(res),
-            Err(mut err) => {
-                err.p_type_stack.push(ParserType::Spaces);
-                Err(err)
-            }
+    fn parse_from_context(&self, mut ctx: Context) -> Result<Success<String>, Failure> {
+        let whitespace: String = ctx.txt[ctx.pos..]
+            .chars()
+            .take_while(|c| c.is_whitespace())
+            .collect();
+
+        if whitespace.is_empty() {
+            return Err(Failure::new("spaces", ctx, vec![ParserType::Spaces]));
         }
+
+        ctx.pos += whitespace.len();
+        Ok(Success::new(whitespace, ctx))
     }
 }
 

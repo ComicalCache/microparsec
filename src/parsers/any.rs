@@ -1,4 +1,4 @@
-use crate::{ParserRc, Context, Failure, ContextParserT, ParserType, Success, StringParserT};
+use crate::{Context, ContextParserT, Failure, ParserRc, ParserType, StringParserT, Success};
 
 /// Parses for any of the supplied parsers and returns the first successful result,
 /// or an error if no parser matched.
@@ -21,13 +21,17 @@ impl<T> AnyParser<T> {
     pub fn new(parsers: Vec<ParserRc<dyn ContextParserT<T>>>) -> Self {
         let generic_error = format!(
             "{{ `{}` }}",
-            parsers.iter()
+            parsers
+                .iter()
                 .map(|p| p.get_generic_error_message().to_string())
                 .collect::<Vec<String>>()
                 .join("` | `")
         );
 
-        AnyParser { parsers, generic_error }
+        AnyParser {
+            parsers,
+            generic_error,
+        }
     }
 }
 
@@ -41,9 +45,6 @@ impl<T> ContextParserT<T> for AnyParser<T> {
     }
 
     fn parse_from_context(&self, ctx: Context) -> Result<Success<T>, Failure> {
-        let mut err_exps = Vec::new();
-        let mut err_p_types = Vec::new();
-
         for parser in self.parsers.iter() {
             match parser.parse_from_context(ctx.clone()) {
                 Ok(res) => return Ok(res),
@@ -51,17 +52,16 @@ impl<T> ContextParserT<T> for AnyParser<T> {
                     if err.p_type_stack.contains(&ParserType::Surely) {
                         err.p_type_stack.push(ParserType::Any);
                         return Err(err);
-                    } else {
-                        err_exps.push(err.exp);
-                        err_p_types.push(parser.get_parser_type());
                     }
                 }
             }
         }
 
-        err_p_types.reverse();
-        err_p_types.push(ParserType::Any);
-        return Err(Failure::new(self.generic_error.clone(), ctx, err_p_types));
+        return Err(Failure::new(
+            self.generic_error.clone(),
+            ctx,
+            vec![ParserType::Any],
+        ));
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{Context, ContextParserT, Failure, ParserType, RegexParser, StringParserT, Success};
+use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success};
 
 /// Parses for an integer
 /// ## Example
@@ -26,14 +26,18 @@ impl ContextParserT<String> for IntegerParser {
         ParserType::Integer
     }
 
-    fn parse_from_context(&self, ctx: Context) -> Result<Success<String>, Failure> {
-        match RegexParser::new(r"\d+", "integer").parse_from_context(ctx) {
-            Ok(res) => Ok(res),
-            Err(mut err) => {
-                err.p_type_stack.push(ParserType::Integer);
-                Err(err)
-            }
+    fn parse_from_context(&self, mut ctx: Context) -> Result<Success<String>, Failure> {
+        let integers: String = ctx.txt[ctx.pos..]
+            .chars()
+            .take_while(|c| c.is_numeric())
+            .collect();
+
+        if integers.is_empty() {
+            return Err(Failure::new("integer", ctx, vec![ParserType::Integer]));
         }
+
+        ctx.pos += integers.len();
+        Ok(Success::new(integers, ctx))
     }
 }
 
