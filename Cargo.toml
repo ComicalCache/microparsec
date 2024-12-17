@@ -5,7 +5,7 @@ edition = "2021"
 
 license = "MIT"
 description = "A simple parser combinator crate for Rust."
-repository = "https://github.com/ComicalCache/parser-combinator"
+repository = "https://github.com/ComicalCache/microparsec"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

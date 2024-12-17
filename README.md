@@ -1,6 +1,6 @@
 # microparsec
 
-A simple parser crate for Rust.
+A simple parser combinator crate for Rust.
 
 ### How to use
 Look at the documentation to see how to use each parser.
