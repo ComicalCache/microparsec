@@ -1,3 +1,5 @@
+use std::ops::Not;
+
 use crate::{Context, ContextParserT, Failure, ParserType, StringParserT, Success};
 
 /// Parses for a specific target string
@@ -16,6 +18,8 @@ pub struct StringParser {
 impl StringParser {
     /// Creates a new `StringParser` with the specified target string
     pub fn new<S: AsRef<str>>(target: S) -> Self {
+        assert!(target.as_ref().is_empty().not(), "Target must not be empty");
+
         StringParser {
             target: target.as_ref().to_string(),
         }

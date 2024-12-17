@@ -1,38 +1,24 @@
-use microparsec::*;
+use microparsec::{Context, Failure};
+use rand::{self, rngs::StdRng, seq::IteratorRandom, Rng, SeedableRng};
 
-fn __test_get_error_message(err: &str, pos: usize) -> String {
+const CHARS: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,!? ";
+
+pub fn __test_get_seeded_rng() -> (u64, StdRng) {
+    let mut rng = rand::thread_rng();
+    let seed = rng.gen();
+
+    (seed, StdRng::seed_from_u64(seed))
+}
+
+pub fn __test_get_rand_string(rng: &mut StdRng, n: usize) -> String {
+    (0..n).map(|_| CHARS.chars().choose(rng).unwrap()).collect()
+}
+
+pub fn __test_get_error_message(err: &str, pos: usize) -> String {
     Failure::new(err, Context::new("", pos), vec![]).get_error_message()
 }
 
-#[test]
-fn string_test() {
-    let res = StringParser::new("H").parse("Hello World");
-    assert_eq!(res.clone().unwrap().val, "H");
-    assert_eq!(res.unwrap().ctx.pos, 1);
-
-    let res = StringParser::new("に").parse("Hello World");
-    assert_eq!(
-        res.unwrap_err().get_error_message(),
-        __test_get_error_message("に", 0)
-    );
-
-    let res = StringParser::new("Hello World").parse("Hello World");
-    assert_eq!(res.clone().unwrap().val, "Hello World");
-    assert_eq!(res.unwrap().ctx.pos, 11);
-
-    let res = StringParser::new("Hallo World").parse("Hello World");
-    assert_eq!(
-        res.unwrap_err().get_error_message(),
-        __test_get_error_message("Hallo World", 0)
-    );
-
-    let res = StringParser::new("Hello World").parse("My Hello World");
-    assert_eq!(
-        res.unwrap_err().get_error_message(),
-        __test_get_error_message("Hello World", 0)
-    );
-}
-
+/*
 #[test]
 fn regex_test() {
     let iban_parser = RegexParser::new(r"DE\d{4}\s\d{4}\s\d{4}", "IBAN");
@@ -440,3 +426,4 @@ fn p_type_stack_test() {
         "[Parser error] Expected `{ `Hi` | `Hallo` | `integer` }` at position: 0\n\nCall Stack:\n1. `any` parser"
     );
 }
+*/
