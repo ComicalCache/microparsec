@@ -1,11 +1,11 @@
 mod utils;
 
 #[cfg(test)]
-mod string {
-    use microparsec::{Context, ContextParserT, StringParser};
+mod optional {
+    use microparsec::{Context, ContextParserT, OptionalParser, ParserRc, StringParser};
     use rand::Rng;
 
-    use crate::utils::{__test_get_error_message, __test_get_rand_string, __test_get_seeded_rng};
+    use crate::utils::{__test_get_rand_string, __test_get_seeded_rng};
 
     #[test]
     fn test() {
@@ -13,6 +13,7 @@ mod string {
         for i in 0..1_000 {
             let (seed, mut rng) = __test_get_seeded_rng();
             let len = rng.gen_range(40..80);
+
             let str = __test_get_rand_string(&mut rng, len);
 
             // 50 iterations of random in str
@@ -22,12 +23,13 @@ mod string {
                 let end = rng.gen_range(start + 1..len + 1);
                 let substr = &str[start..end];
 
-                let res = StringParser::new(substr).parse_from_context(Context {
-                    txt: str.as_str().into(),
-                    pos: start,
-                });
+                let res = OptionalParser::new(ParserRc::new(StringParser::new(substr)))
+                    .parse_from_context(Context {
+                        txt: str.as_str().into(),
+                        pos: start,
+                    });
                 assert_eq!(
-                    res.clone().unwrap().val,
+                    res.clone().unwrap().val.unwrap(),
                     substr,
                     "Failed i={i}, x={x}, seed={seed}"
                 );
@@ -45,14 +47,14 @@ mod string {
                 let rand_pos = rng.gen_range(0..len);
                 let substr = __test_get_rand_string(&mut rng, rand_len);
 
-                let res = StringParser::new(&substr).parse_from_context(Context {
-                    txt: str.as_str().into(),
-                    pos: rand_pos,
-                });
-
+                let res = OptionalParser::new(ParserRc::new(StringParser::new(&substr)))
+                    .parse_from_context(Context {
+                        txt: str.as_str().into(),
+                        pos: rand_pos,
+                    });
                 if str[rand_pos..].starts_with(&substr) {
                     assert_eq!(
-                        res.clone().unwrap().val,
+                        res.clone().unwrap().val.unwrap(),
                         substr,
                         "Failed i={i}, y={y}, seed={seed}"
                     );
@@ -63,8 +65,8 @@ mod string {
                     );
                 } else {
                     assert_eq!(
-                        res.unwrap_err().get_error_message(),
-                        __test_get_error_message(&substr, rand_pos),
+                        res.unwrap().val.is_none(),
+                        true,
                         "Failed i={i}, y={y}, seed={seed}"
                     );
                 }
