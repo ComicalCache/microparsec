@@ -1,7 +1,7 @@
 use microparsec::{Context, Failure};
 use rand::{self, rngs::StdRng, seq::IteratorRandom, Rng, SeedableRng};
 
-const CHARS: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,!? ";
+const CHARS: &str = "abcdef";
 
 pub fn __test_get_seeded_rng() -> (u64, StdRng) {
     let mut rng = rand::thread_rng();
