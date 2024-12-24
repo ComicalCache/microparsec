@@ -3,21 +3,22 @@ use rand::{self, rngs::StdRng, seq::IteratorRandom, Rng, SeedableRng};
 
 const CHARS: &str = "abcdef";
 
-pub fn __test_get_seeded_rng() -> (u64, StdRng) {
+pub fn __get_seeded_rng() -> (u64, StdRng) {
     let mut rng = rand::thread_rng();
     let seed = rng.gen();
 
     (seed, StdRng::seed_from_u64(seed))
 }
 
-pub fn __test_get_rand_string(rng: &mut StdRng, n: usize) -> String {
+pub fn __get_rand_string(rng: &mut StdRng, n: usize) -> String {
     (0..n).map(|_| CHARS.chars().choose(rng).unwrap()).collect()
 }
 
-pub fn __test_get_error_message(err: &str, pos: usize) -> String {
+pub fn __get_error_message(err: &str, pos: usize) -> String {
     Failure::new(err, Context::new("", pos), vec![]).get_error_message()
 }
 
+// TODO: rewrite as random tests
 /*
 #[test]
 fn regex_test() {
@@ -376,3 +377,4 @@ fn p_type_stack_test() {
     );
 }
 */
+

@@ -157,9 +157,7 @@ pub enum Pos {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserType {
     Any,
-    AnythingBetween,
     Between,
-    Either,
     Exact,
     Expect,
     Float,
@@ -168,6 +166,7 @@ pub enum ParserType {
     Letters,
     Many,
     Map,
+    Not,
     Optional,
     Regex,
     Sequence,
@@ -183,9 +182,7 @@ impl Display for ParserType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
             ParserType::Any => "any",
-            ParserType::AnythingBetween => "anything_between",
             ParserType::Between => "between",
-            ParserType::Either => "either",
             ParserType::Exact => "exact",
             ParserType::Expect => "expect",
             ParserType::Float => "float",
@@ -194,6 +191,7 @@ impl Display for ParserType {
             ParserType::Letters => "letters",
             ParserType::Many => "many",
             ParserType::Map => "map",
+            ParserType::Not => "not",
             ParserType::Optional => "optional",
             ParserType::Regex => "regex",
             ParserType::Sequence => "sequence",

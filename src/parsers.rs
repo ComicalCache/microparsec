@@ -47,5 +47,4 @@ mod surely;
 pub use surely::SurelyParser;
 
 mod not;
-
 pub use not::NotParser;
